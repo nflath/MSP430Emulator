@@ -1,0 +1,4 @@
+load rey.data
+exit-on-finished
+input 531b
+c

@@ -1,0 +1,4 @@
+load aa.data
+exit-on-finished
+input 123a2578256e
+c

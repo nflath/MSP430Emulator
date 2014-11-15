@@ -1,0 +1,5 @@
+load sc.data
+exit-on-finished
+input aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0830bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb4a44
+input bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb00
+c

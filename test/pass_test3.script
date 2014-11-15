@@ -1,0 +1,4 @@
+load hanoi.data
+exit-on-finished
+input 111111111111111111111111111111110f
+c

@@ -1,0 +1,4 @@
+load cusco.data
+exit-on-finished
+input 000000000000000000000000000000004644
+c

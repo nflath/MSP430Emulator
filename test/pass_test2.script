@@ -1,0 +1,4 @@
+load sydney.data
+exit-on-finished
+input 653c75585d6e435f
+c
