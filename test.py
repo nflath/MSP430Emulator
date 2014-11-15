@@ -23,9 +23,3 @@ for f in files:
     p.wait();
     assert p.returncode == 1
     print "PASS:", f
-
-def Foo(bar):
-  """What"""
-  pass
-
-Foo()

@@ -345,7 +345,6 @@ State::step() {
   }
 
   memcpy(&prev_data[data_idx],&data, sizeof(data));
-  std::cout << "Saving data.memory to: " << data_idx << std::endl;
   data_idx = (data_idx + 1 ) % 100;
 
   Instruction* i = instructionForAddr(data.r[0]);
