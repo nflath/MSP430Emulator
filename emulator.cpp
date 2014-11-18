@@ -60,6 +60,8 @@ execShellCommand(State* s, std::string command, std::string args) {
     s->list();
   } else if(command == "reset") {
     s->reset();
+  } else if(command == "compare") {
+    s->compare(args);
   } else if(command == "break" || command == "br") {
     std::stringstream ss(args);
     unsigned short addr;

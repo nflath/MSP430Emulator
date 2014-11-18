@@ -260,6 +260,27 @@ State::strToReg(std::string str) {
 }
 
 void
+State::compare(std::string filename) {
+  State* s2 = new State();
+  s2->readMemoryDump(filename);
+  for(unsigned short i = 0; i < sizeof(data.memory); i++) {
+    if(data.memory[i] != s2->data.memory[i]) {
+      std::cout << "Difference at " << std::hex << "0x" << i << ": "
+                << (unsigned short)data.memory[i]
+                << " vs " << (unsigned short)s2->data.memory[i] << std::endl;
+    }
+  }
+  for(unsigned short i = 0; i < 16; i++) {
+    if(data.r[i] != s2->data.r[i]) {
+      std::cout << "Difference in r" << i << ": " << std::hex
+                << (unsigned short)data.r[i] << " vs "
+                << (unsigned short)s2->data.r[i] << std::endl;
+    }
+  }
+  delete s2;
+}
+
+void
 State::readMemoryDump(std::string filename) {
   lastFile = "";
   lastDataFile =filename;

@@ -43,6 +43,7 @@ public:
 
   unsigned short strToReg(std::string str);
   void writeByte(unsigned short address, unsigned char value);
+  void compare(std::string filename);
 
   Instruction* instructionForAddr(unsigned short addr);
   Source* sourceOperand(unsigned short as, unsigned short source, unsigned short addr);
