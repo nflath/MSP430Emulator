@@ -32,9 +32,6 @@ State::reset(bool rereadFile) {
   data_idx = 0;
   data.dep_on = false;
   data.r[0] = 0x4400;
-  for(int i = 1; i < 15; i++) {
-    data.r[i] = 0;
-  }
   if(rereadFile) {
     if(lastDataFile!="") {
       readMemoryDump(lastDataFile);
@@ -244,6 +241,24 @@ State::destOperand(unsigned short ad, unsigned short dest, unsigned short addr) 
   return 0;
 }
 
+unsigned short
+State::strToReg(std::string str) {
+  if(str.substr(0,2) == "pc") {
+    return 0;
+  } if(str.substr(0,2) == "sp") {
+    return 1;
+  } if(str.substr(0,2) == "sr") {
+    return 2;
+  } if(str.substr(0,2) == "cg") {
+    return 3;
+  }
+  std::stringstream ss;
+  ss << str.substr(1,str.size());
+  unsigned short r;
+  ss >> r;
+  return r;
+}
+
 void
 State::readMemoryDump(std::string filename) {
   lastFile = "";
@@ -251,24 +266,46 @@ State::readMemoryDump(std::string filename) {
   std::ifstream f(filename.c_str());
   if (f.is_open()) {
     std::string line;
+    bool resetRegisters = true;
     while ( getline (f,line) ) {
       // 4 cases: instruction, label, string, section
 
-      std::string addrString = line.substr(0,4);
-      std::stringstream ss;
-      unsigned short addr;
-      ss << std::hex << addrString;
-      ss >> addr;
-
-      if(line[8] == '*') {
+      if(line == "") {
         continue;
+      }
+      if(std::string(line.substr(0,2)) =="pc" || line[0] == 'r') {
+        for(int i = 0; i < 4; i++) {
+          resetRegisters = false;
+          std::string reg = line.substr(i * 10,3);
+          std::stringstream ss;
+          unsigned short value;
+          ss << std::hex << line.substr(i*10+4,i*10+8);
+          ss >> value;
+          data.r[strToReg(reg)] = value;
+        }
       } else {
-        for(int i = 0; i < 16; i++) {
-          data.memory[addr+i] = (unsigned char)(strtoul(line.substr(8+i*2+i/2,2).c_str(), NULL, 16));
+        std::string addrString = line.substr(0,4);
+        std::stringstream ss;
+        unsigned short addr;
+        ss << std::hex << addrString;
+        ss >> addr;
+
+        if(line[8] == '*') {
+          continue;
+        } else {
+          for(int i = 0; i < 16; i++) {
+            data.memory[addr+i] = (unsigned char)(strtoul(line.substr(8+i*2+i/2,2).c_str(), NULL, 16));
+          }
         }
       }
-
     }
+
+    if(resetRegisters) {
+      for(int i = 1; i < 15; i++) {
+        data.r[i] = 0;
+      }
+    }
+
   } else {
     std::cout << "Error opening file: '" << filename << "'" << std::endl;
   }

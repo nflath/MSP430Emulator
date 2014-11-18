@@ -41,7 +41,7 @@ public:
   std::map<unsigned short, unsigned char> watchpoint;
   std::map<unsigned char, unsigned short> watchpointRegister;
 
-
+  unsigned short strToReg(std::string str);
   void writeByte(unsigned short address, unsigned char value);
 
   Instruction* instructionForAddr(unsigned short addr);
