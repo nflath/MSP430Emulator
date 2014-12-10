@@ -52,6 +52,7 @@ public:
   unsigned char readByte(unsigned short addr);
   void readFile(std::string filename);
   void readMemoryDump(std::string filename);
+  void createMemoryDump();
   void list();
   void step();
   void reverse();

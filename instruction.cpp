@@ -56,9 +56,9 @@ INTERRUPT::execute(State* s) {
   unsigned char interrupt = (s->data.r[2]&0x7f00) >> 8;
   switch(interrupt) {
   case 0x00: {// putchar
-    char c = (char)s->data.memory[s->data.r[11]-1];
-    if((c >= 32 && c < 127)) {
-      std::cout << (char)s->data.memory[s->data.r[11]-1] << std::flush; // FixMe: Why subtract 1 here?
+    char c = (char)s->data.memory[s->data.r[1]+8];
+    if((c >= 10 && c < 127)) {
+      std::cout << c << std::flush;
     }
     break;
   }
@@ -382,9 +382,10 @@ void
 RRC::execute(State* s) {
   if(!byte) {
     // FixMe: Is this correct
-    source->setValue(source->value()>>1);
+    source->setValue(((unsigned short)(source->value()))>>1);
   } else {
     // FixMe: Not implemented
+    notimplemented();
     //source->setValueByte(source->valueByte()>>1);
   }
 }

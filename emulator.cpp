@@ -56,6 +56,8 @@ execShellCommand(State* s, std::string command, std::string args) {
     std::cout << args << std::endl;
   } else if(command == "load") {
     s->readMemoryDump(args);
+  } else if(command == "dump") {
+    s->createMemoryDump();
   } else if(command == "list") {
     s->list();
   } else if(command == "reset") {
@@ -136,7 +138,16 @@ execShellCommand(State* s, std::string command, std::string args) {
     std::cout << i->toString() << std::endl;
     delete i;
   } else if(command == "r" || command == "reverse") {
-    s->reverse();
+    if(args.length() > 0) {
+      std::stringstream ss(args);
+      int max;
+      ss >> max;
+      for(int i = 0; i < max; i++) {
+        s->reverse();
+      }
+    } else {
+      s->reverse();
+    }
     std::cout << std::hex << s->data.r[0] << ": "<< std::flush;
     Instruction* i = s->instructionForAddr(s->data.r[0]);
     if(i) {

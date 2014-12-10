@@ -5,6 +5,10 @@
 
 unsigned short
 State::readWord(unsigned short addr) {
+  if((addr%2) != 0) {
+    std::cout << "load address unaligned: " << std::hex << addr << std::endl;
+    data.running = false;
+  }
   unsigned short nibble[] = {
     (data.memory[addr+1]&0xf0),// >> 4,
     (data.memory[addr+1]&0x0f),// << 4,
@@ -31,7 +35,6 @@ State::reset(bool rereadFile) {
   input_idx = 0;
   data_idx = 0;
   data.dep_on = false;
-  data.r[0] = 0x4400;
   if(rereadFile) {
     if(lastDataFile!="") {
       readMemoryDump(lastDataFile);
@@ -288,13 +291,17 @@ State::readMemoryDump(std::string filename) {
   if (f.is_open()) {
     std::string line;
     bool resetRegisters = true;
+    for(unsigned short i = 0; i < 0xffff; i++) {
+      data.memory[i] = 0;
+    }
+
     while ( getline (f,line) ) {
       // 4 cases: instruction, label, string, section
 
       if(line == "") {
         continue;
       }
-      if(std::string(line.substr(0,2)) =="pc" || line[0] == 'r') {
+      if(std::string(line.substr(0,2)) == "pc" || line[0] == 'r') {
         for(int i = 0; i < 4; i++) {
           resetRegisters = false;
           std::string reg = line.substr(i * 10,3);
@@ -304,7 +311,7 @@ State::readMemoryDump(std::string filename) {
           ss >> value;
           data.r[strToReg(reg)] = value;
         }
-      } else {
+      } else if(line.substr(0,2)!="--") {
         std::string addrString = line.substr(0,4);
         std::stringstream ss;
         unsigned short addr;
@@ -322,6 +329,7 @@ State::readMemoryDump(std::string filename) {
     }
 
     if(resetRegisters) {
+      data.r[0] = 0x4400;
       for(int i = 1; i < 15; i++) {
         data.r[i] = 0;
       }
@@ -331,6 +339,35 @@ State::readMemoryDump(std::string filename) {
     std::cout << "Error opening file: '" << filename << "'" << std::endl;
   }
   reset(false);
+}
+
+void
+State::createMemoryDump() {
+  bool starPrinted = false;
+  for(unsigned int i = 0; i < 0xfff; i++) {
+
+    std::stringstream ss;
+    for(unsigned int j = 0; j < 0x8; j++) {
+      ss << std::hex << std::setw(2) << std::setfill('0') << (unsigned short)data.memory[(i<<4) + j]
+         << std::hex << std::setw(2) << std::setfill('0') << (unsigned short)data.memory[(i<<4)+(j*2+1)] << " ";
+    }
+    if(ss.str() == "0000 0000 0000 0000 0000 0000 0000 0000 ") {
+      if(starPrinted) {
+      } else {
+        std::cout << std::hex << i << "0:   *" << std::endl;
+        starPrinted = true;
+      }
+    } else {
+      std::cout << std::hex << i << "0:   ";
+      std::cout << ss.str();
+      std::cout << std::endl;
+      starPrinted = false;
+    }
+
+  }
+  for(unsigned int r = 0; r < 16; r++) {
+    std::cout << "r" << std::setbase(10) << r << " " << std::hex << std::setw(4) << std::setfill('0') << data.r[r] << std::endl;
+  }
 }
 
 void
