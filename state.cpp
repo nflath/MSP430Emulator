@@ -35,10 +35,17 @@ State::reset(bool rereadFile) {
   input_idx = 0;
   data_idx = 0;
   data.dep_on = false;
+  watchpoint_triggered=false;
+
+
+
   if(rereadFile) {
     if(lastDataFile!="") {
       readMemoryDump(lastDataFile);
     }
+  }
+  for(std::map<unsigned short, unsigned char>::iterator j =  watchpoint.begin(); j != watchpoint.end(); j++) {
+    watchpoint[j->first] = data.memory[j->first];
   }
 }
 
@@ -154,6 +161,7 @@ State::sourceOperand(unsigned short as, unsigned short source, unsigned short ad
     }
     case 3: {
       return new Constant(readWord(addr),true);
+      //new RegisterIndirectAutoincrementSource(0); // FixMe: Is this true?
     }
     }
   } else if(source == 2) {
@@ -229,8 +237,6 @@ State::destOperand(unsigned short ad, unsigned short dest, unsigned short addr) 
       return new AbsoluteDest(readWord(addr));
     }
     }
-  } else if(dest == 3) {
-    assert(false);
   } else {
     switch(ad) {
     case 0 : {

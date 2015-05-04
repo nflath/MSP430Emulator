@@ -69,11 +69,16 @@ execShellCommand(State* s, std::string command, std::string args) {
     unsigned short addr;
     ss >> std::hex >> addr;
     s->breakpoint[addr] = true;
-  } else if(command == "rb") {
-    std::stringstream ss(args);
-    unsigned short addr;
-    ss >> std::hex >> addr;
-    s->breakpoint.erase(addr);
+  } else if(command == "remove" || command == "rb") {
+    if(args[0] == 'r') {
+      s->watchpointRegister.erase(strToR(args.substr(1)));
+    } else {
+      std::stringstream ss(args);
+      unsigned short addr;
+      ss >> std::hex >> addr;
+      s->breakpoint.erase(addr);
+      s->watchpoint.erase(addr);
+    }
   } else if(command == "watch") {
     if(args[0] == 'r') {
 

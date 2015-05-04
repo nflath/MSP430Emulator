@@ -1,3 +1,9 @@
+
+// http://www.ece.utep.edu/courses/web3376/Links_files/MSP430%20Quick%20Reference.pdf
+// http://www.physics.mcmaster.ca/phys3b06/MSP430/MSP430_Instruction_Set_Summary.pdf
+// http://homepages.ius.edu/RWISMAN/C335/HTML/MSP430/Chapt4.pdf
+// *** http://www.physics.mcmaster.ca/phys3b06/MSP430/Instruction_Set.pdf
+
 #ifndef INSTRUCTION_H
 #define INSTRUCTION_H
 
@@ -259,6 +265,8 @@ class DADD : public InstructionTwoOperands {
   virtual std::string instructionName() {
     return "DADD";
   }
+
+  virtual void execute(State* s);
 };
 
 class BIT : public InstructionTwoOperands {

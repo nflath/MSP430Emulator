@@ -323,6 +323,77 @@ ADD::execute(State* s) {
   }
 }
 
+unsigned short
+convertBcdToHex(unsigned int value) {
+  unsigned int result = 0;
+  unsigned int multiplier = 1;
+  for(int position = 0; position < 4; position++) {
+    unsigned int carry = 0;
+    unsigned int tmp = value & (0x000f << (position * 4));
+    tmp = tmp >> (position * 4);
+    if(tmp >= 10) {
+      tmp = tmp - 10;
+      carry = 1;
+    }
+    result = result + (tmp * multiplier) + carry * (multiplier *10);
+    multiplier*=10;
+  }
+  return result;
+}
+
+unsigned short
+convertHexToBcd(unsigned int value) {
+  unsigned int result = 0;
+  if(value >= 10000) {
+    // FixMe: Add carry bit calculations
+    value /= 10;
+  } else {
+    int position = 0;
+    for(int multiplier = 10; multiplier < 100000; multiplier *= 10) {
+      int tmp = (value % ( multiplier)) / (multiplier / 10);
+      value = value - (tmp * (multiplier / 10));
+      result = result + (tmp << (position * 4));
+
+      position++;
+    }
+  }
+  return result;
+}
+
+void
+DADD::execute(State* s) {
+  if(!byte) {
+    // FixMe: Add carry bit calculations
+
+    unsigned short result = convertBcdToHex(dest->value()) +
+      convertBcdToHex(source->value());
+
+    std::cout << "source: " << source->value() << " " << convertBcdToHex(source->value()) << std::endl;;
+    std::cout << "dest: " << source->value() << " " << convertBcdToHex(dest->value()) << std::endl;;
+    std::cout << "result: " << result << " " << convertHexToBcd(result) << std::endl;;
+
+    dest->set(convertHexToBcd(result));
+
+    //FixMe: What else does DADD add?
+
+    s->data.r[2] =
+      ((result < 0) << 2) |
+      ((result == 0) << 1);
+    //FixMe: not complete
+
+
+  } else {
+    notimplemented();
+    unsigned short result = convertBcdToHex(dest->valueByte()) +
+      convertBcdToHex(source->valueByte());
+
+    dest->setByte(convertHexToBcd(result));
+
+    //FixMe: What else does DADD add?
+
+  }
+}
+
 void
 SUB::execute(State* s) {
   if(!byte) {
@@ -385,8 +456,9 @@ RRC::execute(State* s) {
     source->setValue(((unsigned short)(source->value()))>>1);
   } else {
     // FixMe: Not implemented
+    source->setValue(source->valueByte()>>1);
     notimplemented();
-    //source->setValueByte(source->valueByte()>>1);
+    // FixMe: Possibly Wrong, fix
   }
 }
 
