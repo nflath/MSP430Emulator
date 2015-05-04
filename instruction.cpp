@@ -457,8 +457,6 @@ RRC::execute(State* s) {
   } else {
     // FixMe: Not implemented
     source->setValue(source->valueByte()>>1);
-    notimplemented();
-    // FixMe: Possibly Wrong, fix
   }
 }
 
