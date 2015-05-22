@@ -60,8 +60,9 @@ class Instruction {
   virtual std::string toString() = 0;
   virtual std::string instructionName() = 0;
   virtual unsigned char size() { return 2; }
-virtual void execute(State* s);
-virtual ~Instruction() {}
+  virtual void execute(State* s);
+  virtual ~Instruction() {}
+  std::string sourceString;
 };
 
 class Condition : public Instruction {

@@ -51,7 +51,7 @@ public:
   Instruction* instructionForAddr(unsigned short addr);
   Source* sourceOperand(unsigned short as, unsigned short source, unsigned short addr);
   Dest* destOperand(unsigned short ad, unsigned short dest, unsigned short addr);
-  unsigned short readWord(unsigned short addr);
+  unsigned short readWord(unsigned short addr, bool byte_=false);
   unsigned char readByte(unsigned short addr);
   void readFile(std::string filename);
   void readMemoryDump(std::string filename);

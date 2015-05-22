@@ -228,8 +228,6 @@ SWPB::execute(State* s) {
 // 0000 0110  23
 void
 JNE::execute(State* s) {
-  // FixMe: hy don't we have to decrement instuction size here?
-  // FixMe: Is this correct?
   if(s->data.r[2] == 0x0f00) {
     notimplemented();
   } else if((s->data.r[2]&0x2)==0) {
@@ -237,10 +235,8 @@ JNE::execute(State* s) {
   }
 }
 
-
 void
 JMP::execute(State* s) {
-  // FixMe: why don't we have to decrement instuction size here?
   s->data.r[0] = addr+2*offset+2;
 }
 
@@ -295,7 +291,7 @@ CALL::execute(State* s) {
   s->writeByte(s->data.r[1]-1,(unsigned char)( ((s->data.r[0])&0xff00) >> 8));
   s->writeByte(s->data.r[1]-2,(unsigned char)( ((s->data.r[0])&0x00ff)));
   s->data.r[1] -= 2;
-  s->data.r[0] = source->value();// - size();
+  s->data.r[0] = source->value();
 }
 
 void

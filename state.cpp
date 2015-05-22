@@ -4,8 +4,8 @@
 #include <fstream>
 
 unsigned short
-State::readWord(unsigned short addr) {
-  if((addr%2) != 0) {
+State::readWord(unsigned short addr, bool byte_) {
+  if(!byte_ && (addr%2) != 0) {
     std::cout << "load address unaligned: " << std::hex << addr << std::endl;
     data.running = false;
   }
@@ -134,7 +134,7 @@ State::instructionForAddr(unsigned short addr) {
     }
     retn->byte = bw;
     retn->source = sourceOperand(as, source, addr+2);
-    if(retn->source->usedExtensionWord()) {
+    if(retn->source->usedExtensionWord) {
       retn->dest = destOperand(ad, dest, addr + 4);
     } else {
       retn->dest = destOperand(ad, dest, addr + 2);
@@ -145,19 +145,20 @@ State::instructionForAddr(unsigned short addr) {
   return 0;
 }
 
+
 Source*
 State::sourceOperand(unsigned short as, unsigned short source, unsigned short addr) {
   if(source == 0) {
     // Using the PC
     switch(as) {
     case 0: {
-      return new RegisterSource(source); // FixMe is this correct?
+      return new RegisterSource(source,(unsigned char*)&s->data.r[source]); // FixMe is this correct?
     }
     case 1: {
-      return new RegisterIndirectSource(0);
+      return new RegisterIndirectSource(0,&s->data.memory[s->data.r[source]]);
     }
     case 2: {
-      return new RegisterIndirectSource(0);
+      return new RegisterIndirectSource(0,&s->data.memory[s->data.r[source]]);
     }
     case 3: {
       return new Constant(readWord(addr),true);
@@ -168,7 +169,7 @@ State::sourceOperand(unsigned short as, unsigned short source, unsigned short ad
     switch(as) {
     case 0: {
       // FixMe: is this correct?
-      return new RegisterSource(source);
+      return new RegisterSource(source,(unsigned char*)&s->data.r[source]);
     }
     case 1: {
       return new Absolute(readWord(addr));
@@ -199,16 +200,16 @@ State::sourceOperand(unsigned short as, unsigned short source, unsigned short ad
   } else {
     switch(as) {
     case 0 : {
-      return new RegisterSource(source);
+      return new RegisterSource(source,(unsigned char*)&s->data.r[source]);
     }
     case 1 : {
       return new RegisterIndexedSource(source, readWord(addr));
     }
     case 2 : {
-      return new RegisterIndirectSource(source);
+      return new RegisterIndirectSource(source,&s->data.memory[s->data.r[source]]);
     }
     case 3 : {
-      return new RegisterIndirectAutoincrementSource(source);
+      return new RegisterIndirectAutoincrementSource(source,&s->data.memory[s->data.r[source]]);
     }
     }
   }

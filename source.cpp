@@ -20,69 +20,35 @@ Constant::toString() {
 }
 
 short
-Absolute::value() {
-  return s->readWord(address);
+Absolute::value(bool byte) {
+  return s->readWord(address,byte);
 }
 
-unsigned char
-Constant::valueByte() {
-  return val;
-}
 
-unsigned char
-Absolute::valueByte() {
-  return s->readByte(address);
-}
 
 short
-RegisterSource::value() {
+RegisterSource::value(bool byte) {
   return s->data.r[reg];
 }
 
-void
-RegisterSource::setValue(unsigned short val) {
-  s->data.r[reg] = val;
+short
+RegisterIndirectSource::value(bool byte) {
+  return s->readWord(s->data.r[reg],byte);
 }
 
-unsigned char
-RegisterSource::valueByte() {
-  return s->data.r[reg] & 0x00ff;
-}
 
 short
-RegisterIndirectSource::value() {
-  return s->readWord(s->data.r[reg]);
-}
+RegisterIndirectAutoincrementSource::value(bool byte) {
+  unsigned short retn = s->readWord(s->data.r[reg],byte);
+  s->data.r[reg]+=byte?1:2;
 
-unsigned char
-RegisterIndirectSource::valueByte() {
-  return s->data.memory[s->data.r[reg]];
-}
-
-short
-RegisterIndirectAutoincrementSource::value() {
-  unsigned short retn = s->readWord(s->data.r[reg]);
-  s->data.r[reg]+=2; // FixMe; is it always 2?
 
   return retn;
 }
 
-unsigned char
-RegisterIndirectAutoincrementSource::valueByte() {
-  unsigned short retn = s->readByte(s->data.r[reg]);
-  s->data.r[reg]+=1; // FixMe; is it always 2?
-
-  return 0;
-}
-
 short
-RegisterIndexedSource::value() {
-  return s->readWord(s->data.r[reg]+index);
-}
-
-unsigned char
-RegisterIndexedSource::valueByte() {
-  return s->readByte(s->data.r[reg]+index);
+RegisterIndexedSource::value(bool byte) {
+  return s->readWord(s->data.r[reg]+index,byte);
 }
 
 std::string

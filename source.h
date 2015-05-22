@@ -9,14 +9,25 @@ class State;
 
 class Source {
  public:
+  unsigned short* memLocationOfSource;
+
   virtual std::string toString() = 0;
-  virtual short value() = 0;
-  virtual void setValue(unsigned short val) { notimplemented(); }
-  virtual unsigned char valueByte() = 0;
-  virtual bool usedExtensionWord() {
-    return false;
+  // FixMe: This will be necessary
+
+  virtual short value(bool byte=false) = 0;
+  unsigned char valueByte() {
+    return value(true)&0xff;
   }
-  virtual unsigned char size() { return usedExtensionWord() ? 2 : 0; }
+  void setValue(unsigned short val) {
+    if(!memLocationOfSource) {
+      notimplemented();
+    }
+    *memLocationOfSource = val;
+  }
+
+  bool usedExtensionWord;
+  virtual unsigned char size() { return usedExtensionWord ? 2 : 0; }
+
 };
 
 class Absolute : public Source {
@@ -24,15 +35,11 @@ class Absolute : public Source {
   unsigned short address;
 
   virtual std::string toString();
-  virtual bool usedExtensionWord() {
-    return true;
-  }
-
-  virtual short value();
-  virtual unsigned char valueByte();
+  virtual short value(bool byte=false);
 
  Absolute(short address_):
   address(address_) {
+    usedExtensionWord = true;
   }
 };
 
@@ -41,21 +48,16 @@ class Constant : public Source {
   unsigned short val;
   bool extWordUsed;
 
-  virtual bool usedExtensionWord() {
-    return extWordUsed;
-  }
-
   virtual std::string toString();
 
-  virtual short value() {
+  virtual short value(bool byte=false) {
     return val;
   }
-  virtual unsigned char valueByte();
 
  Constant(short value_,bool extWordUsed_):
   val(value_),
     extWordUsed(extWordUsed_) {
-
+     usedExtensionWord = extWordUsed;
   }
 };
 
@@ -63,13 +65,13 @@ class RegisterSource : public Source {
  public:
   unsigned short reg;
 
-  virtual short value();
-  virtual unsigned char valueByte();
-  virtual void setValue(unsigned short val);
+  virtual short value(bool byte=false);
   virtual std::string toString();
 
- RegisterSource(unsigned short reg_) :
+ RegisterSource(unsigned short reg_, unsigned char* memLocationOfSource_) :
   reg(reg_) {
+    memLocationOfSource = (unsigned short*)memLocationOfSource_;
+    usedExtensionWord = false;
   }
 
 };
@@ -78,11 +80,12 @@ class RegisterIndirectSource : public RegisterSource {
  public:
 
   virtual std::string toString();
-  virtual short value();
-  virtual unsigned char valueByte();
+  virtual short value(bool byte);
 
- RegisterIndirectSource(unsigned short reg_) :
-  RegisterSource(reg_) {
+ RegisterIndirectSource(unsigned short reg_, unsigned char* memLocationOfSource_) :
+  RegisterSource(reg_,0) {
+    memLocationOfSource = (unsigned short*)memLocationOfSource_;
+    usedExtensionWord = false;
   }
 };
 
@@ -91,16 +94,12 @@ class RegisterIndexedSource : public RegisterSource {
   short index;
 
   virtual std::string toString();
-  virtual short value();
-  virtual unsigned char valueByte();
-
-  virtual bool usedExtensionWord() {
-    return true;
-  }
+  virtual short value(bool byte=false);
 
  RegisterIndexedSource(unsigned short reg_, short index_) :
-  RegisterSource(reg_),
+  RegisterSource(reg_,0),
     index(index_) {
+      usedExtensionWord = true;
   }
 };
 
@@ -108,11 +107,11 @@ class RegisterIndirectAutoincrementSource : public RegisterIndirectSource {
  public:
 
   virtual std::string toString();
-  virtual short value();
-  virtual unsigned char valueByte();
+  virtual short value(bool byte=false);
 
- RegisterIndirectAutoincrementSource(unsigned short reg_) :
-  RegisterIndirectSource(reg_) {
+ RegisterIndirectAutoincrementSource(unsigned short reg_, unsigned char* memLocationOfSource_) :
+  RegisterIndirectSource(reg_, memLocationOfSource_) {
+    usedExtensionWord = false;
   }
 };
 
