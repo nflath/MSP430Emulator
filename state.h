@@ -23,6 +23,9 @@ public:
     bool dep_on;
 
     bool page_writable[256];
+
+    unsigned short rand;
+    bool use_rand;
   };
 
   Data data;

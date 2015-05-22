@@ -33,6 +33,7 @@ std::ostream& operator<<(std::ostream& os, const OpCode_TwoOperand& obj) {
 }
 
 int
+
 strToR(const std::string str) {
   if(str == "pc") {
     return 0;
@@ -49,17 +50,23 @@ strToR(const std::string str) {
   return -1;
 }
 
-
+bool printOnAll = false;
 void
 execShellCommand(State* s, std::string command, std::string args) {
   if(command == "echo") {
     std::cout << args << std::endl;
+  } else if(command == "--print") {
+    printOnAll = true;
   } else if(command == "load") {
     s->readMemoryDump(args);
   } else if(command == "dump") {
     s->createMemoryDump();
   } else if(command == "list") {
     s->list();
+  } else if(command == "rand") {
+    std::stringstream ss(args);
+    ss >> std::hex >> s->data.rand;
+    s->data.use_rand = true;
   } else if(command == "reset") {
     s->reset();
   } else if(command == "compare") {
@@ -71,7 +78,7 @@ execShellCommand(State* s, std::string command, std::string args) {
     s->breakpoint[addr] = true;
   } else if(command == "remove" || command == "rb") {
     if(args[0] == 'r') {
-      s->watchpointRegister.erase(strToR(args.substr(1)));
+      s->watchpointRegister.erase(strToR(args));
     } else {
       std::stringstream ss(args);
       unsigned short addr;
@@ -82,7 +89,7 @@ execShellCommand(State* s, std::string command, std::string args) {
   } else if(command == "watch") {
     if(args[0] == 'r') {
 
-      s->watchpointRegister[strToR(args.substr(1))] = s->data.r[strToR(args.substr(1))];
+      s->watchpointRegister[strToR(args)] = s->data.r[strToR(args)];
 
     } else {
       std::stringstream ss(args);
@@ -98,6 +105,11 @@ execShellCommand(State* s, std::string command, std::string args) {
             s->data.locked &&
             !s->watchpoint_triggered) {
         s->step();
+        if(printOnAll) {
+          std::cout << std::hex << s->data.r[0] << ": "<< std::flush;
+          Instruction* j = s->instructionForAddr(s->data.r[0]);
+          std::cout << j->toString() << std::endl;
+        }
         if(s->breakpoint[s->data.r[0]]) {
           break;
         }
@@ -128,12 +140,18 @@ execShellCommand(State* s, std::string command, std::string args) {
       std::cout << std::hex << s->data.r[0] << ": " << i->toString() << std::endl;
     }
   } else if(command == "s" || command == "step") {
-    if(args.length() > 0) {
+    if(args.length() > 1) {
+      bool print = false;
       std::stringstream ss(args);
       int max;
       ss >> max;
       for(int i = 0; i < max; i++) {
         s->step();
+        if(printOnAll) {
+          std::cout << std::hex << s->data.r[0] << ": "<< std::flush;
+          Instruction* j = s->instructionForAddr(s->data.r[0]);
+          std::cout << j->toString() << std::endl;
+        }
       }
     } else {
       s->step();
@@ -199,6 +217,8 @@ execShellCommand(State* s, std::string command, std::string args) {
     s->input.push_back(args);
   } else if(command == "exit-on-finished") {
     s->exit_on_finished = true;
+  } else if(command == "exit") {
+    exit(0);
   } else {
     std::cout << "Unknown command: '" << command << "'" << std::endl;
   }

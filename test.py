@@ -1,4 +1,4 @@
-
+import time
 import subprocess
 import os
 from os import listdir
@@ -23,3 +23,10 @@ for f in files:
     p.wait();
     assert p.returncode == 1
     print "PASS:", f
+
+before = time.time()
+p = subprocess.Popen(("../emulator","-r","perfo.test"),stdout=subprocess.PIPE)
+p.wait()
+assert p.returncode == 0
+after = time.time()
+print 'Performance: 1 million instructions in:', after-before, 'seconds'

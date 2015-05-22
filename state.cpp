@@ -157,7 +157,7 @@ State::sourceOperand(unsigned short as, unsigned short source, unsigned short ad
       return new RegisterIndirectSource(0);
     }
     case 2: {
-      return new RegisterIndirectAutoincrementSource(0);
+      return new RegisterIndirectSource(0);
     }
     case 3: {
       return new Constant(readWord(addr),true);
@@ -458,11 +458,15 @@ State::step() {
     std::cout << "Opcode: " << opcode << std::endl;
     return;
   }
-  i->execute(this);
+
 
   if(data.r[0]==pc) {
     data.r[0] += i->size();
   }
+
+
+  i->execute(this);
+
 
   if(!data.locked) {
     if(exit_on_finished) {

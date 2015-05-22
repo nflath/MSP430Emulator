@@ -3,6 +3,7 @@
 // http://www.physics.mcmaster.ca/phys3b06/MSP430/MSP430_Instruction_Set_Summary.pdf
 // http://homepages.ius.edu/RWISMAN/C335/HTML/MSP430/Chapt4.pdf
 // *** http://www.physics.mcmaster.ca/phys3b06/MSP430/Instruction_Set.pdf
+// http://www.ti.com.cn/cn/lit/ug/slau049f/slau049f.pdf
 
 #ifndef INSTRUCTION_H
 #define INSTRUCTION_H

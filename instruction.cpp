@@ -1,4 +1,3 @@
-
 #include "instruction.h"
 #include "state.h"
 #include "util.h"
@@ -125,7 +124,11 @@ INTERRUPT::execute(State* s) {
     break;
   }
   case 0x20: { // rand
-    s->data.r[15] = rand();
+    if(s->data.use_rand) {
+      s->data.r[15] = s->data.rand;
+    } else {
+      s->data.r[15] = rand();
+    }
     break;
   }
   case 0x7D: { // set flag if password is correct
@@ -186,7 +189,7 @@ void
 JN::execute(State* s) {
   if(s->data.r[2] == 0x0f00) {
     notimplemented();
-  } else if((s->data.r[3]&0x1)!=0) {
+  } else if((s->data.r[2]&0x1)!=0) {
     s->data.r[0] = addr+2*offset+2;
   }
 }
@@ -230,7 +233,7 @@ JNE::execute(State* s) {
   if(s->data.r[2] == 0x0f00) {
     notimplemented();
   } else if((s->data.r[2]&0x2)==0) {
-    s->data.r[0] = addr+2*offset+2;//-size();
+    s->data.r[0] = addr+2*offset+2;
   }
 }
 
@@ -289,8 +292,8 @@ PUSH::execute(State* s) {
 
 void
 CALL::execute(State* s) {
-  s->writeByte(s->data.r[1]-1,(unsigned char)( ((s->data.r[0]+size())&0xff00) >> 8));
-  s->writeByte(s->data.r[1]-2,(unsigned char)( ((s->data.r[0]+size())&0x00ff)));
+  s->writeByte(s->data.r[1]-1,(unsigned char)( ((s->data.r[0])&0xff00) >> 8));
+  s->writeByte(s->data.r[1]-2,(unsigned char)( ((s->data.r[0])&0x00ff)));
   s->data.r[1] -= 2;
   s->data.r[0] = source->value();// - size();
 }
@@ -298,7 +301,9 @@ CALL::execute(State* s) {
 void
 AND::execute(State* s) {
   if(!byte) {
-    dest->set((dest->value())&(source->value()));
+    short result = (dest->value())&(source->value());
+    dest->set(result);
+    s->data.r[2] = (result < 0) << 2 | (result == 0) << 1 | 0;
   } else {
     // FixMe: Is this correct?
     dest->set((dest->value() & 0xff)&(source->value() & 0xff));
@@ -308,14 +313,18 @@ AND::execute(State* s) {
 void
 ADD::execute(State* s) {
   if(!byte) {
-    short result = dest->value() + source->value();
-    dest->set(dest->value() + (source->value()));
+    unsigned int dv = (0x0000ffff & (unsigned int)dest->value());
+    unsigned int sv = (0x0000ffff & (unsigned int)source->value());
+    unsigned int result =  dv + sv;
+
+    dest->set(dest->value()+source->value());
+
+
 
     s->data.r[2] =
-      ((result < 0) << 2) |
-      ((result == 0) << 1);
-    //FixMe: not complete
-
+      ((dest->value()&0x8000)>>13) |
+      ((dest->value() == 0) << 1) |
+      ((result & 0x10000) >> 16);
 
   } else {
     dest->setByte((dest->valueByte() + (source->valueByte())));
@@ -343,6 +352,7 @@ convertBcdToHex(unsigned int value) {
 
 unsigned short
 convertHexToBcd(unsigned int value) {
+  std::cout << "convertHexToBcd: " << value << std::endl;
   unsigned int result = 0;
   if(value >= 10000) {
     // FixMe: Add carry bit calculations
@@ -350,7 +360,7 @@ convertHexToBcd(unsigned int value) {
   } else {
     int position = 0;
     for(int multiplier = 10; multiplier < 100000; multiplier *= 10) {
-      int tmp = (value % ( multiplier)) / (multiplier / 10);
+      int tmp = (value % (multiplier)) / (multiplier / 10);
       value = value - (tmp * (multiplier / 10));
       result = result + (tmp << (position * 4));
 
@@ -360,25 +370,47 @@ convertHexToBcd(unsigned int value) {
   return result;
 }
 
+struct BcdResult {
+  unsigned short result;
+  unsigned short carry;
+};
+
+BcdResult
+addBcd(unsigned int val1, unsigned int val2) {
+  unsigned short carry = 0; // FixMe:???
+  unsigned short result = 0;
+  for(int position = 0; position < 4; position++) {
+    unsigned char nibble =
+      carry +
+      (((val1 & (0xf << position * 4))) >> (position * 4)) +
+      (((val2 & (0xf << position * 4))) >> (position * 4));
+    if( nibble > 9 ) {
+      nibble = 0xf&(nibble - 10);
+      carry = 1;
+    } else {
+      carry = 0;
+    }
+    result |= nibble << (position * 4);
+  }
+  BcdResult bcd;
+  bcd.result = result;
+  bcd.carry = carry;
+  return bcd;
+}
+
 void
 DADD::execute(State* s) {
   if(!byte) {
     // FixMe: Add carry bit calculations
 
-    unsigned short result = convertBcdToHex(dest->value()) +
-      convertBcdToHex(source->value());
+    BcdResult bcd = addBcd(dest->value(),source->value());
 
-    std::cout << "source: " << source->value() << " " << convertBcdToHex(source->value()) << std::endl;;
-    std::cout << "dest: " << source->value() << " " << convertBcdToHex(dest->value()) << std::endl;;
-    std::cout << "result: " << result << " " << convertHexToBcd(result) << std::endl;;
-
-    dest->set(convertHexToBcd(result));
-
-    //FixMe: What else does DADD add?
+    dest->set(bcd.result);
 
     s->data.r[2] =
-      ((result < 0) << 2) |
-      ((result == 0) << 1);
+      ((bcd.result < 0) << 2) |
+      ((bcd.result == 0) << 1) |
+      bcd.carry;
     //FixMe: not complete
 
 
@@ -397,9 +429,15 @@ DADD::execute(State* s) {
 void
 SUB::execute(State* s) {
   if(!byte) {
+    int carry = (source->value() > dest->value())?0:1;
     dest->set((dest->value() - (source->value())));
 
-    s->data.r[2] = ((dest->value() == 0) << 1) + 0; // FixMe: is this right? (ANSWER: NO)
+    s->data.r[2] =
+      ((dest->value() < 0) << 2) |
+       ((dest->value() == 0) << 1) |
+       carry; // FixMe: is this right? (ANSWER: NO)
+
+
 
   } else {
     assert(!"Not implemented");
@@ -452,10 +490,17 @@ XOR::execute(State* s) {
 void
 RRC::execute(State* s) {
   if(!byte) {
-    // FixMe: Is this correct
-    source->setValue(((unsigned short)(source->value()))>>1);
+    // FixMe: Is this correct?
+    int carry = source->value()&0x1;
+    if(s->data.r[2]&0x1) {
+      source->setValue(0x8000|((unsigned short)(source->value()))>>1);
+    } else {
+      source->setValue(((unsigned short)(source->value()))>>1);
+    }
+    s->data.r[2] = carry;
+
   } else {
-    // FixMe: Not implemented
+
     source->setValue(source->valueByte()>>1);
   }
 }
