@@ -18,11 +18,12 @@ class Source {
   unsigned char valueByte() {
     return value(true)&0xff;
   }
-  void setValue(unsigned short val) {
+  virtual void setValue(unsigned short val) {
     if(!memLocationOfSource) {
       notimplemented();
+    } else {
+      *memLocationOfSource = val;
     }
-    *memLocationOfSource = val;
   }
 
   bool usedExtensionWord;

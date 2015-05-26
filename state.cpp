@@ -439,8 +439,7 @@ State::writeByte(unsigned short addr, unsigned char value) {
 void
 State::step() {
   watchpoint_triggered = false;
-
-
+  data.printed = false;
   if((data.r[0] % 2)) {
     data.running = false;
     std::cout << "ISN unaligned:" << std::hex << data.r[0] << std::endl;
@@ -497,9 +496,7 @@ State::step() {
       watchpointRegister[j->first] = data.r[j->first];
       watchpoint_triggered = true;
     }
-
   }
-
 }
 
 State* s = new State();

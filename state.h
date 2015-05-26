@@ -26,6 +26,7 @@ public:
 
     unsigned short rand;
     bool use_rand;
+    bool printed;
   };
 
   Data data;
@@ -37,6 +38,7 @@ public:
 
   std::vector<std::string> input;
   int input_idx;
+  bool break_on_print;
 
   std::map<unsigned short, std::string> label;
   std::map<unsigned short, std::string> section;

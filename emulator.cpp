@@ -51,12 +51,15 @@ strToR(const std::string str) {
 }
 
 bool printOnAll = false;
+bool break_on_print = false;
 void
 execShellCommand(State* s, std::string command, std::string args) {
   if(command == "echo") {
     std::cout << args << std::endl;
   } else if(command == "--print") {
-    printOnAll = true;
+    printOnAll = !printOnAll;
+  } else if(command == "--break-on-print") {
+    break_on_print = !break_on_print;
   } else if(command == "load") {
     s->readMemoryDump(args);
   } else if(command == "dump") {
@@ -76,7 +79,7 @@ execShellCommand(State* s, std::string command, std::string args) {
     unsigned short addr;
     ss >> std::hex >> addr;
     s->breakpoint[addr] = true;
-  } else if(command == "remove" || command == "rb") {
+  } else if(command == "remove" || command == "rb" || command == "dis") {
     if(args[0] == 'r') {
       s->watchpointRegister.erase(strToR(args));
     } else {
@@ -99,11 +102,12 @@ execShellCommand(State* s, std::string command, std::string args) {
     }
   } else if(command == "c" || command == "continue") {
     int numSteps = 1;
-
+    s->data.printed = false;
     for(int i = 0; i < numSteps; i++) {
       while(s->data.running &&
             s->data.locked &&
-            !s->watchpoint_triggered) {
+            !s->watchpoint_triggered&&
+            (!break_on_print||!s->data.printed)) {
         s->step();
         if(printOnAll) {
           std::cout << std::hex << s->data.r[0] << ": "<< std::flush;

@@ -59,6 +59,7 @@ INTERRUPT::execute(State* s) {
     if((c >= 10 && c < 127)) {
       std::cout << c << std::flush;
     }
+    s->data.printed = true;
     break;
   }
   case 1: { // getchar
@@ -250,9 +251,8 @@ SXT::execute(State* s) {
 void
 CMP::execute(State* s) {
   if(!byte) {
-    unsigned int carry = dest->value() + (~source->value()+1);
+    unsigned int carry = (unsigned int)dest->value() + (~(unsigned int)source->value()+1);
     short result =  dest->value() - source->value();
-    //std::cout << "Comparing: " << dest->value() << " " << source->value() << " " << (~carry >> 16)&0x1 << std::endl;
     s->data.r[2] =
       (((source>0&dest<0 & result<0)|(source<0&dest>0 & result>0)) << 3) +
       ((result < 0) << 2) +
@@ -303,6 +303,7 @@ AND::execute(State* s) {
   } else {
     // FixMe: Is this correct?
     dest->set((dest->value() & 0xff)&(source->value() & 0xff));
+    //s->0x80) << 2 | (result == 0) << 1 | 0;
   }
 }
 
@@ -369,17 +370,21 @@ convertHexToBcd(unsigned int value) {
 struct BcdResult {
   unsigned short result;
   unsigned short carry;
+  unsigned short setn;
 };
 
 BcdResult
 addBcd(unsigned int val1, unsigned int val2) {
-  unsigned short carry = 0; // FixMe:???
+  unsigned short carry = 0;
   unsigned short result = 0;
+  unsigned short setn;
   for(int position = 0; position < 4; position++) {
     unsigned char nibble =
       carry +
       (((val1 & (0xf << position * 4))) >> (position * 4)) +
       (((val2 & (0xf << position * 4))) >> (position * 4));
+    setn = !!(nibble&0x8);
+    // FixMe: I don't understand this.
     if( nibble > 9 ) {
       nibble = 0xf&(nibble - 10);
       carry = 1;
@@ -391,6 +396,7 @@ addBcd(unsigned int val1, unsigned int val2) {
   BcdResult bcd;
   bcd.result = result;
   bcd.carry = carry;
+  bcd.setn = setn;
   return bcd;
 }
 
@@ -404,7 +410,7 @@ DADD::execute(State* s) {
     dest->set(bcd.result);
 
     s->data.r[2] =
-      ((bcd.result < 0) << 2) |
+      ((bcd.setn?bcd.setn:(!!(s->data.r[2]&0x4))) << 2) |
       ((bcd.result == 0) << 1) |
       bcd.carry;
     //FixMe: not complete
@@ -422,16 +428,28 @@ DADD::execute(State* s) {
   }
 }
 
+//7815 -+
+//fb2e
+
 void
 SUB::execute(State* s) {
   if(!byte) {
-    int carry = (source->value() > dest->value())?0:1;
-    dest->set((dest->value() - (source->value())));
+
+
+    int result = (unsigned int)dest->value() +
+      ((unsigned int)(~(unsigned short)source->value() + 1));
+
+    int carry = (result >> 16) & 0x1;
+    if(s->data.r[0] == 0x5108 || s->data.r[0] == 0x5014) {
+      std::cout << "SUB: " << dest->value() << " " << source->value() << " " << ~source->value() << " " << result << " " << carry << " " << (result>>16) << std::endl;;
+    }
+
+    dest->set(result);
 
     s->data.r[2] =
       ((dest->value() < 0) << 2) |
        ((dest->value() == 0) << 1) |
-       carry; // FixMe: is this right? (ANSWER: NO)
+      carry;
 
 
 
@@ -477,7 +495,12 @@ BIS::execute(State* s) {
 void
 XOR::execute(State* s) {
   if(!byte) {
+    // FixMe: XOR srs
     dest->set((dest->value())^(source->value()));
+    //dest->r[2] =
+    //!!(dest->value()&0x8000) << 2 |
+    ///!!dest->value() << 1
+
   } else {
     dest->setByte((dest->valueByte())^(source->valueByte()));
   }
@@ -493,10 +516,15 @@ RRC::execute(State* s) {
     } else {
       source->setValue(((unsigned short)(source->value()))>>1);
     }
-    s->data.r[2] = carry;
+
+    int n = !!(source->value()&0x8000)<<2;
+
+    s->data.r[2] = (s->data.r[2] & 0x04) | (!source) << 1 | carry;
+    if(n) s->data.r[2] |= n;
+    // Doesn't clear N
+
 
   } else {
-
     source->setValue(source->valueByte()>>1);
   }
 }
@@ -504,8 +532,17 @@ RRC::execute(State* s) {
 void
 RRA::execute(State* s) {
   if(!byte) {
-    // FixMe: Is this correct
-    source->setValue(source->value()>>1);
+    int carry = source->value()&1;
+    source->setValue((source->value()&0x8000) | source->value()>>1);
+
+
+    unsigned short orig = s->data.r[2];
+    //s->data.r[2] = ((source->value() < 0) << 2) |
+    //      ((source->value() == 0) << 1);// |
+    //  (carry);
+    // Note: It looks like their emulator does not set the sr for RRA
+
+
   } else {
     notimplemented();
   }
