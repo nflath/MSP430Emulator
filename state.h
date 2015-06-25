@@ -27,6 +27,7 @@ public:
     unsigned short rand;
     bool use_rand;
     bool printed;
+    bool inputed;
   };
 
   Data data;

@@ -52,15 +52,23 @@ strToR(const std::string str) {
 
 bool printOnAll = false;
 bool break_on_print = false;
+bool break_on_input = false;
+int steps = 0;
 void
 execShellCommand(State* s, std::string command, std::string args) {
-  if(command == "echo") {
+  if(command == "reset-steps") {
+    steps = 0;
+  } else if(command == "steps") {
+    std::cout << "Steps: " << std::dec << steps << std::hex << std::endl;
+  } else if(command == "echo") {
     std::cout << args << std::endl;
   } else if(command == "--print") {
     printOnAll = !printOnAll;
   } else if(command == "--break-on-print") {
     break_on_print = !break_on_print;
-  } else if(command == "load") {
+  } else if(command == "--break-on-input") {
+    break_on_input = !break_on_input;
+  }else if(command == "load") {
     s->readMemoryDump(args);
   } else if(command == "dump") {
     s->createMemoryDump();
@@ -107,7 +115,9 @@ execShellCommand(State* s, std::string command, std::string args) {
       while(s->data.running &&
             s->data.locked &&
             !s->watchpoint_triggered&&
-            (!break_on_print||!s->data.printed)) {
+            (!break_on_print||!s->data.printed)&&
+            (!break_on_input||!s->data.inputed)) {
+        steps++;
         s->step();
         if(printOnAll) {
           std::cout << std::hex << s->data.r[0] << ": "<< std::flush;
@@ -130,6 +140,7 @@ execShellCommand(State* s, std::string command, std::string args) {
           s->data.locked &&
           !s->watchpoint_triggered&&
           s->readWord(s->data.r[0]) != 0x4130) {
+      steps++;
       s->step();
       if(s->breakpoint[s->data.r[0]]) {
         break;
@@ -137,6 +148,7 @@ execShellCommand(State* s, std::string command, std::string args) {
     }
     if(s->data.running &&
        (s->readWord(s->data.r[0]) == 0x4130)) {
+      steps++;
       s->step();
     }
     if(s->data.running) {
@@ -151,6 +163,7 @@ execShellCommand(State* s, std::string command, std::string args) {
       ss >> max;
       for(int i = 0; i < max; i++) {
         s->step();
+        steps++;
         if(printOnAll) {
           std::cout << std::hex << s->data.r[0] << ": "<< std::flush;
           Instruction* j = s->instructionForAddr(s->data.r[0]);
@@ -159,6 +172,7 @@ execShellCommand(State* s, std::string command, std::string args) {
       }
     } else {
       s->step();
+      steps++;
     }
     std::cout << std::hex << s->data.r[0] << ": "<< std::flush; //
     Instruction* i = s->instructionForAddr(s->data.r[0]);
@@ -170,9 +184,11 @@ execShellCommand(State* s, std::string command, std::string args) {
       int max;
       ss >> max;
       for(int i = 0; i < max; i++) {
+        steps--;
         s->reverse();
       }
     } else {
+      steps--;
       s->reverse();
     }
     std::cout << std::hex << s->data.r[0] << ": "<< std::flush;

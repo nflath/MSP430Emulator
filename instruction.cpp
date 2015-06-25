@@ -40,6 +40,11 @@
 // tst r15
 // sr goes from 2 to 3
 
+#define SR_C = 0x1;
+#define SR_Z = 0x2;
+#define SR_N = 0x4;
+#define SR_V = 0x8;
+
 void
 Instruction::execute(State* s) {
   notimplemented();
@@ -104,7 +109,7 @@ INTERRUPT::execute(State* s) {
       destaddr++;
     }
 
-
+    s->data.inputed = true;
     break;
   }
   case 0x10: { // DEP
@@ -301,32 +306,55 @@ AND::execute(State* s) {
     dest->set(result);
     s->data.r[2] = (result < 0) << 2 | (result == 0) << 1 | 0;
   } else {
-    // FixMe: Is this correct?
     dest->set((dest->value() & 0xff)&(source->value() & 0xff));
-    //s->0x80) << 2 | (result == 0) << 1 | 0;
+    //short result = (dest->value())&(source->value())&0xff;
+    //dest->setByte(result);
+    //s->data.r[2] = (!!(result & 0x80)) << 2 | (result == 0) << 1 | 0;
   }
 }
 
 void
+setflags(unsigned int result, bool bw, State* s) {
+  unsigned short sr = 0;
+  unsigned sz = 16;
+  if(bw) {
+    sz = 8;
+  }
+
+  if(bw == 0 && (result & 0x8000))  {
+    sr |= 0x4;
+  }
+
+  if ((result & ((1 << sz) - 1)) == 0) {
+    sr |= 0x2;
+  }
+
+  if (result & (1 << sz)) {
+    sr |= 0x1;
+  }
+
+  s->data.r[2] = sr;
+
+}
+
+void
 ADD::execute(State* s) {
+  unsigned int result =  0;
   if(!byte) {
     unsigned int dv = (0x0000ffff & (unsigned int)dest->value());
     unsigned int sv = (0x0000ffff & (unsigned int)source->value());
-    unsigned int result =  dv + sv;
+    result = dv + sv;
 
-    dest->set(dest->value()+source->value());
-
-
-
-    s->data.r[2] =
-      ((dest->value()&0x8000)>>13) |
-      ((dest->value() == 0) << 1) |
-      ((result & 0x10000) >> 16);
-
+    dest->set(result);
   } else {
-    dest->setByte((dest->valueByte() + (source->valueByte())));
+    unsigned int dv = (0x000000ff & (unsigned int)dest->valueByte());
+    unsigned int sv = (0x000000ff & (unsigned int)source->valueByte());
+    result =  dv + sv;
+
+    dest->setByte(result);
     s->data.r[2] = 0x0f00;
   }
+  setflags(result, byte, s);
 }
 
 unsigned short
@@ -439,10 +467,7 @@ SUB::execute(State* s) {
     int result = (unsigned int)dest->value() +
       ((unsigned int)(~(unsigned short)source->value() + 1));
 
-    int carry = (result >> 16) & 0x1;
-    if(s->data.r[0] == 0x5108 || s->data.r[0] == 0x5014) {
-      std::cout << "SUB: " << dest->value() << " " << source->value() << " " << ~source->value() << " " << result << " " << carry << " " << (result>>16) << std::endl;;
-    }
+    int carry = ((result >> 16) & 0x1) || !((unsigned short)source->value() >> 15);
 
     dest->set(result);
 

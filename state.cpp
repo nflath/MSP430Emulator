@@ -7,6 +7,9 @@ unsigned short
 State::readWord(unsigned short addr, bool byte_) {
   if(!byte_ && (addr%2) != 0) {
     std::cout << "load address unaligned: " << std::hex << addr << std::endl;
+    if(exit_on_finished) {
+      exit(1);
+    }
     data.running = false;
   }
   unsigned short nibble[] = {
@@ -440,6 +443,7 @@ void
 State::step() {
   watchpoint_triggered = false;
   data.printed = false;
+  data.inputed = false;
   if((data.r[0] % 2)) {
     data.running = false;
     std::cout << "ISN unaligned:" << std::hex << data.r[0] << std::endl;
