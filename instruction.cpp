@@ -463,20 +463,16 @@ void
 SUB::execute(State* s) {
   if(!byte) {
 
-
-    int result = (unsigned int)dest->value() +
-      ((unsigned int)(~(unsigned short)source->value() + 1));
+    unsigned int olddest = 0xffff&(unsigned int)dest->value();
+    unsigned int oldsource = 0xffff&(unsigned int)source->value();
+    unsigned int tmpsrc = 0xffff&(~(unsigned int)oldsource + 1);
+    unsigned int result = olddest + tmpsrc;
 
     int carry = ((result >> 16) & 0x1) || !((unsigned short)source->value() >> 15);
 
     dest->set(result);
 
-    s->data.r[2] =
-      ((dest->value() < 0) << 2) |
-       ((dest->value() == 0) << 1) |
-      carry;
-
-
+    setflags(result, byte, s);
 
   } else {
     assert(!"Not implemented");

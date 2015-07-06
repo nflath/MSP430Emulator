@@ -145,7 +145,10 @@ State::instructionForAddr(unsigned short addr) {
 
     return retn;
   }
+  std::cout << "Failed to find instruction." << std::endl;
+  s->data.running = false;
   return 0;
+
 }
 
 
