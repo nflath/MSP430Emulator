@@ -514,14 +514,18 @@ BIS::execute(State* s) {
 }
 
 void
+setandflags(State*s, unsigned short value) {
+  s->data.r[2] =
+    !!(value&0x8000) << 2 |
+    !value << 1 |
+    !!value;
+}
+
+void
 XOR::execute(State* s) {
   if(!byte) {
-    // FixMe: XOR srs
     dest->set((dest->value())^(source->value()));
-    //dest->r[2] =
-    //!!(dest->value()&0x8000) << 2 |
-    ///!!dest->value() << 1
-
+    setandflags(s, dest->value());
   } else {
     dest->setByte((dest->valueByte())^(source->valueByte()));
   }
