@@ -46,6 +46,16 @@
 #define SR_V = 0x8;
 
 void
+setandflags(State*s, unsigned short value) {
+  s->data.r[2] =
+    !!(value&0x8000) << 2 |
+    !value << 1 |
+    !!value;
+}
+
+
+
+void
 Instruction::execute(State* s) {
   notimplemented();
 }
@@ -250,6 +260,7 @@ void
 SXT::execute(State* s) {
   if(source->valueByte()&0x80) {
     source->setValue(0xff00 | source->valueByte());
+    setandflags(s, source->value());
   }
 }
 
@@ -307,9 +318,6 @@ AND::execute(State* s) {
     s->data.r[2] = (result < 0) << 2 | (result == 0) << 1 | 0;
   } else {
     dest->set((dest->value() & 0xff)&(source->value() & 0xff));
-    //short result = (dest->value())&(source->value())&0xff;
-    //dest->setByte(result);
-    //s->data.r[2] = (!!(result & 0x80)) << 2 | (result == 0) << 1 | 0;
   }
 }
 
@@ -511,14 +519,6 @@ BIS::execute(State* s) {
   } else {
     assert(!"Not implemented");
   }
-}
-
-void
-setandflags(State*s, unsigned short value) {
-  s->data.r[2] =
-    !!(value&0x8000) << 2 |
-    !value << 1 |
-    !!value;
 }
 
 void
