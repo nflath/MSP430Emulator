@@ -562,7 +562,7 @@ RRA::execute(State* s) {
 
 
     unsigned short orig = s->data.r[2];
-    //s->data.r[2] = ((source->value() < 0) << 2) |
+    s->data.r[2] &= (0b11111101);
     //      ((source->value() == 0) << 1);// |
     //  (carry);
     // Note: It looks like their emulator does not set the sr for RRA
