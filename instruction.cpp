@@ -46,13 +46,37 @@
 #define SR_V = 0x8;
 
 void
-setandflags(State*s, unsigned short value) {
+setandflags(State*s, unsigned short value, bool byte=false) {
   s->data.r[2] =
-    !!(value&0x8000) << 2 |
+    (byte?(!!(value&0x8000) << 2):(!!(value&0x80) << 2)) |
     !value << 1 |
     !!value;
 }
 
+
+void
+setflags(unsigned int result, bool bw, State* s) {
+  unsigned short sr = 0;
+  unsigned sz = 16;
+  if(bw) {
+    sz = 8;
+  }
+
+  if(bw == 0 && (result & 0x8000))  {
+    sr |= 0x4;
+  }
+
+  if ((result & ((1 << sz) - 1)) == 0) {
+    sr |= 0x2;
+  }
+
+  if (result & (1 << sz)) {
+    sr |= 0x1;
+  }
+
+  s->data.r[2] = sr;
+
+}
 
 
 void
@@ -219,7 +243,6 @@ JNC::execute(State* s) {
   }
 }
 
-
 void
 JGE::execute(State* s) {
   if(s->data.r[2] == 0x0f00) {
@@ -239,9 +262,6 @@ SWPB::execute(State* s) {
   source->setValue((b2 << 8) + b1);
 }
 
-
-// f623
-// 0000 0110  23
 void
 JNE::execute(State* s) {
   if(s->data.r[2] == 0x0f00) {
@@ -312,37 +332,15 @@ CALL::execute(State* s) {
 
 void
 AND::execute(State* s) {
+  short result = 0;
   if(!byte) {
-    short result = (dest->value())&(source->value());
+    result = (dest->value())&(source->value());
     dest->set(result);
-    s->data.r[2] = (result < 0) << 2 | (result == 0) << 1 | 0;
   } else {
-    dest->set((dest->value() & 0xff)&(source->value() & 0xff));
+    result = (dest->value() & 0xff)&(source->value() & 0xff);
+    dest->set(result);
   }
-}
-
-void
-setflags(unsigned int result, bool bw, State* s) {
-  unsigned short sr = 0;
-  unsigned sz = 16;
-  if(bw) {
-    sz = 8;
-  }
-
-  if(bw == 0 && (result & 0x8000))  {
-    sr |= 0x4;
-  }
-
-  if ((result & ((1 << sz) - 1)) == 0) {
-    sr |= 0x2;
-  }
-
-  if (result & (1 << sz)) {
-    sr |= 0x1;
-  }
-
-  s->data.r[2] = sr;
-
+  setandflags(s,dest->value(),byte);
 }
 
 void
@@ -449,18 +447,8 @@ DADD::execute(State* s) {
       ((bcd.setn?bcd.setn:(!!(s->data.r[2]&0x4))) << 2) |
       ((bcd.result == 0) << 1) |
       bcd.carry;
-    //FixMe: not complete
-
-
   } else {
     notimplemented();
-    unsigned short result = convertBcdToHex(dest->valueByte()) +
-      convertBcdToHex(source->valueByte());
-
-    dest->setByte(convertHexToBcd(result));
-
-    //FixMe: What else does DADD add?
-
   }
 }
 
@@ -492,9 +480,6 @@ BIC::execute(State* s) {
   if(!byte) {
     unsigned short result = (dest->value())&~(source->value());
     dest->set(result);
-    s->data.r[2] = (result>>15)<<2 |
-      (result==0)<<1 |
-      0;
   } else {
     assert(!"Not implemented");
   }
@@ -504,9 +489,7 @@ void
 BIT::execute(State* s) {
   if(!byte) {
     unsigned short result = (dest->value())&(source->value());
-    s->data.r[2] = (result>>15)<<2 |
-      (result==0)<<1 |
-      0;
+    setandflags(s,result);
   } else {
     notimplemented();
   }
@@ -517,7 +500,7 @@ BIS::execute(State* s) {
   if(!byte) {
     dest->set((dest->value())|(source->value()));
   } else {
-    assert(!"Not implemented");
+    notimplemented();
   }
 }
 
@@ -528,30 +511,29 @@ XOR::execute(State* s) {
     setandflags(s, dest->value());
   } else {
     dest->setByte((dest->valueByte())^(source->valueByte()));
+    setandflags(s, dest->valueByte(),false);
   }
 }
 
 void
 RRC::execute(State* s) {
+  int carry = 0;
   if(!byte) {
-    // FixMe: Is this correct?
-    int carry = source->value()&0x1;
+    carry = source->value()&0x1;
     if(s->data.r[2]&0x1) {
       source->setValue(0x8000|((unsigned short)(source->value()))>>1);
     } else {
       source->setValue(((unsigned short)(source->value()))>>1);
     }
-
-    int n = !!(source->value()&0x8000)<<2;
-
-    s->data.r[2] = (s->data.r[2] & 0x04) | (!source) << 1 | carry;
-    if(n) s->data.r[2] |= n;
-    // Doesn't clear N
-
-
   } else {
+    carry = source->valueByte()&0x1;
     source->setValue(source->valueByte()>>1);
   }
+
+  int n = !!(source->value()&0x8000)<<2;
+  s->data.r[2] = (s->data.r[2] & 0x04) | (!source) << 1 | carry;
+  if(n) s->data.r[2] |= n;
+  // Doesn't clear N
 }
 
 void
@@ -563,11 +545,6 @@ RRA::execute(State* s) {
 
     unsigned short orig = s->data.r[2];
     s->data.r[2] &= (0b11111101);
-    //      ((source->value() == 0) << 1);// |
-    //  (carry);
-    // Note: It looks like their emulator does not set the sr for RRA
-
-
   } else {
     notimplemented();
   }
