@@ -55,8 +55,9 @@ State::reset(bool rereadFile) {
 Instruction*
 State::instructionForAddr(unsigned short addr) {
   unsigned short val = readWord(addr);
+  Instruction * retn_;
   if(addr == 0x10) {
-    return new INTERRUPT();
+    retn_ = new INTERRUPT();
   } else if((val&0xff00) == 0) {
     InstructionOneOperand* retn = new RRC();
     unsigned short bw = (val&0x0040) >> 6;
@@ -64,7 +65,7 @@ State::instructionForAddr(unsigned short addr) {
     unsigned short reg = (val&0x000f);
     retn->byte = bw;
     retn->source = sourceOperand(as, reg, addr+2);
-    return retn;
+    retn_ = retn;
   } else if( (val&0xfb00) >> 10 == 0b000100) {
     OpCode_OneOperand opcode = (OpCode_OneOperand)((val&0x0380) >> 7);
     unsigned short bw = (val&0x0040) >> 6;
@@ -86,7 +87,7 @@ State::instructionForAddr(unsigned short addr) {
       retn->byte = bw;
       retn->source = sourceOperand(as, reg, addr+2);
     }
-    return retn;
+    retn_ = retn;
   } else if( (val&0xe000) >> 13 == 0b001 ) {
 
     ConditionCode condition = (ConditionCode)((val&0x1c00)>>10);
@@ -110,7 +111,7 @@ State::instructionForAddr(unsigned short addr) {
 
     retn->addr = addr;
     retn->offset = offset;
-    return retn;
+    retn_ = retn;
   } else {
     OpCode_TwoOperand opcode = (OpCode_TwoOperand)((val&0xf000) >> 12);
     unsigned short source = (val&0x0f00) >> 8;
@@ -143,11 +144,22 @@ State::instructionForAddr(unsigned short addr) {
       retn->dest = destOperand(ad, dest, addr + 2);
     }
 
-    return retn;
+    retn_ = retn;
   }
-  std::cout << "Failed to find instruction." << std::endl;
-  s->data.running = false;
-  return 0;
+  if(!retn_) {
+    std::cout << "Failed to find instruction." << std::endl;
+    s->data.running = false;
+    return 0;
+  } else {
+    int i = 0;
+    int s = retn_->size();
+    while(s) {
+      retn_->bytes[i] = (data.memory[addr+i*2] << 8) + data.memory[addr+i*2+1];
+      i++;
+      s-=2;
+    }
+    return retn_;
+  }
 
 }
 
@@ -311,33 +323,36 @@ State::readMemoryDump(std::string filename) {
     while ( getline (f,line) ) {
       // 4 cases: instruction, label, string, section
 
-      if(line == "") {
-        continue;
-      }
-      if(std::string(line.substr(0,2)) == "pc" || line[0] == 'r') {
-        for(int i = 0; i < 4; i++) {
-          resetRegisters = false;
-          std::string reg = line.substr(i * 10,3);
-          std::stringstream ss;
-          unsigned short value;
-          ss << std::hex << line.substr(i*10+4,i*10+8);
-          ss >> value;
-          data.r[strToReg(reg)] = value;
-        }
-      } else if(line.substr(0,2)!="--") {
-        std::string addrString = line.substr(0,4);
-        std::stringstream ss;
-        unsigned short addr;
-        ss << std::hex << addrString;
-        ss >> addr;
-
-        if(line[8] == '*') {
+      try {
+        if(line == "") {
           continue;
-        } else {
-          for(int i = 0; i < 16; i++) {
-            data.memory[addr+i] = (unsigned char)(strtoul(line.substr(8+i*2+i/2,2).c_str(), NULL, 16));
+        }
+        if(std::string(line.substr(0,2)) == "pc" || line[0] == 'r') {
+          for(int i = 0; i < 4; i++) {
+            resetRegisters = false;
+            std::string reg = line.substr(i * 10,3);
+            std::stringstream ss;
+            unsigned short value;
+            ss << std::hex << line.substr(i*10+4,i*10+8);
+            ss >> value;
+            data.r[strToReg(reg)] = value;
+          }
+        } else if(line.substr(0,2)!="--") {
+          std::string addrString = line.substr(0,4);
+          std::stringstream ss;
+          unsigned short addr;
+          ss << std::hex << addrString;
+          ss >> addr;
+
+          if(line[8] == '*') {
+            continue;
+          } else {
+            for(int i = 0; i < 16; i++) {
+              data.memory[addr+i] = (unsigned char)(strtoul(line.substr(8+i*2+i/2,2).c_str(), NULL, 16));
+            }
           }
         }
+      } catch(...) {
       }
     }
 
@@ -481,6 +496,12 @@ State::step() {
     }
   }
   if(data.r[2]&0x0080) {
+    data.running = false;
+    if(exit_on_finished) {
+      exit(1);
+    }
+  }
+  if(data.r[2]&0x0010) {
     data.running = false;
     if(exit_on_finished) {
       exit(1);

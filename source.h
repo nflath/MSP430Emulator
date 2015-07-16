@@ -18,6 +18,7 @@ class Source {
   unsigned char valueByte() {
     return value(true)&0xff;
   }
+
   virtual void setValue(unsigned short val) {
     if(!memLocationOfSource) {
       notimplemented();

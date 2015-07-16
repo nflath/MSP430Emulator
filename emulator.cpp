@@ -51,6 +51,7 @@ strToR(const std::string str) {
 }
 
 bool printOnAll = false;
+bool traceOnAll = false;
 bool break_on_print = false;
 bool break_on_input = false;
 int steps = 0;
@@ -64,7 +65,9 @@ execShellCommand(State* s, std::string command, std::string args) {
     std::cout << args << std::endl;
   } else if(command == "--print") {
     printOnAll = !printOnAll;
-  } else if(command == "--break-on-print") {
+  } else if(command == "--trace") {
+    traceOnAll = !traceOnAll;
+  }else if(command == "--break-on-print") {
     break_on_print = !break_on_print;
   } else if(command == "--break-on-input") {
     break_on_input = !break_on_input;
@@ -123,6 +126,10 @@ execShellCommand(State* s, std::string command, std::string args) {
           std::cout << std::hex << s->data.r[0] << ": "<< std::flush;
           Instruction* j = s->instructionForAddr(s->data.r[0]);
           std::cout << j->toString() << std::endl;
+        }
+        if(traceOnAll) {
+          Instruction* j = s->instructionForAddr(s->data.r[0]);
+          std::cout << j->byteStr() << std::endl;
         }
         if(s->breakpoint[s->data.r[0]]) {
           break;

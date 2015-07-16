@@ -78,6 +78,24 @@ setflags(unsigned int result, bool bw, State* s) {
 
 }
 
+std::string
+Condition::toString() {
+  std::stringstream ss,ss2;
+  ss << "0x" << std::hex << std::setfill('0') << std::setw(4) << (addr+2+offset*2);
+  return byteStr() + ": " + instructionName() + "\t" + ss.str();
+}
+
+std::string InstructionOneOperand::toString() {
+  return byteStr() + ": " + instructionName() + (byte ? ".b\t" : "\t") + source->toString();
+}
+
+std::string InstructionTwoOperands::toString() {
+  std::string str = byteStr() + ": " + instructionName() + (byte ? ".b\t" : "\t") + source->toString() + ", " + dest->toString();
+  if(str == "MOV\t@sp+, PC") {
+    return "RET";
+  }
+  return str;
+}
 
 void
 Instruction::execute(State* s) {

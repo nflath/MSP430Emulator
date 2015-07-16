@@ -58,20 +58,25 @@ enum OpCode_OneOperand {
 class Instruction {
  public:
   virtual std::string toString() = 0;
+  virtual std::string byteStr() {
+    std::stringstream ss;
+    for(int i = 0; i < size()/2; i++) {
+      if(i != 0) ss << " ";
+      ss << std::hex << std::setw(4) << std::setfill('0') << bytes[i];
+    }
+    return ss.str();
+  }
   virtual std::string instructionName() = 0;
   virtual unsigned char size() { return 2; }
   virtual void execute(State* s);
   virtual ~Instruction() {}
   std::string sourceString;
+  unsigned short bytes[3];
 };
 
 class Condition : public Instruction {
  public:
-  virtual std::string toString() {
-    std::stringstream ss;
-    ss << "0x" << std::hex << std::setfill('0') << std::setw(4) << (addr+2+offset*2);
-    return instructionName() + "\t" + ss.str();
-  }
+  virtual std::string toString();
 
   unsigned short addr;
   signed short offset;
@@ -128,10 +133,7 @@ class JMP : public Condition {
 
 class InstructionOneOperand : public Instruction {
  public:
-  virtual std::string toString() {
-    // FixMe: Implement
-    return instructionName() + (byte ? ".b\t" : "\t") + source->toString();
-  }
+  virtual std::string toString();
   bool byte;
 
   virtual unsigned char size() { return 2 + source->size(); }
@@ -196,13 +198,7 @@ class RETI : public InstructionOneOperand {
 
 class InstructionTwoOperands : public Instruction {
  public:
-  virtual std::string toString() {
-    std::string str = instructionName() + (byte ? ".b\t" : "\t") + source->toString() + ", " + dest->toString();
-    if(str == "MOV\t@sp+, PC") {
-      return "RET";
-    }
-    return str;
-  }
+  virtual std::string toString();
 
   virtual unsigned char size() { return 2 + source->size() + dest->size(); }
 
