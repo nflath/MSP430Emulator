@@ -150,6 +150,24 @@ State::instructionForAddr(unsigned short addr) {
       }
     }
 
+    // Possible r = 0
+    {
+      ADD* add = dynamic_cast<ADD*>(retn);
+      if(add) {
+        JNE* jne = dynamic_cast<JNE*>(realInstructionForAddr(addr+add->size()));
+        if(jne) {
+          Constant* addSource = dynamic_cast<Constant*>(add->source);
+          RegisterDest* addDest = dynamic_cast<RegisterDest*>(add->dest);
+          if(addSource &&
+             addDest &&
+             addSource->val == 0xffff &&
+             addr == (jne->addr+2*jne->offset+2)) {
+            return new Clear(addDest->reg,add->size()+jne->size());
+          }
+        }
+      }
+
+    }
 
   }
   return retn;

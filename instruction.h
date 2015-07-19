@@ -110,6 +110,23 @@ public:
   }
 };
 
+class Clear : public VirtualInstruction {
+public:
+  unsigned short r;
+  unsigned short size_;
+
+  virtual std::string toString();
+  virtual unsigned char size() { return size_; }
+
+  virtual std::string instructionName() { return "clear"; }
+
+  virtual void execute(State* s);
+
+  Clear(unsigned short r_, unsigned short size__):
+    r(r_),size_(size__) {
+  }
+};
+
 class Condition : public Instruction {
  public:
   virtual std::string toString();

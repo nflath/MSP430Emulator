@@ -82,15 +82,15 @@ std::string
 Condition::toString() {
   std::stringstream ss,ss2;
   ss << "0x" << std::hex << std::setfill('0') << std::setw(4) << (addr+2+offset*2);
-  return byteStr() + ": " + instructionName() + "\t" + ss.str();
+  return instructionName() + "\t" + ss.str();
 }
 
 std::string InstructionOneOperand::toString() {
-  return byteStr() + ": " + instructionName() + (byte ? ".b\t" : "\t") + source->toString();
+  return instructionName() + (byte ? ".b\t" : "\t") + source->toString();
 }
 
 std::string InstructionTwoOperands::toString() {
-  std::string str = byteStr() + ": " + instructionName() + (byte ? ".b\t" : "\t") + source->toString() + ", " + dest->toString();
+  std::string str = instructionName() + (byte ? ".b\t" : "\t") + source->toString() + ", " + dest->toString();
   if(str == "MOV\t@sp+, PC") {
     return "RET";
   }
@@ -240,6 +240,18 @@ MemcpyModify::execute(State* s) {
     s->data.r[dest] = s->data.r[dest] + amount;
     s->data.r[amount] = 0;
   }
+}
+
+std::string
+Clear::toString() {
+  std::stringstream ss;
+  ss << r;
+  return "CLEAR r"+ss.str();
+}
+
+void
+Clear::execute(State* s) {
+  s->data.r[r] = 0;
 }
 
 std::string

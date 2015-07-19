@@ -1,6 +1,7 @@
 import time
 import subprocess
 import os
+import sys
 from os import listdir
 from os.path import isfile, join
 
@@ -24,9 +25,11 @@ for f in files:
     assert p.returncode == 1
     print "PASS:", f
 
-# before = time.time()
-# p = subprocess.Popen(("../emulator","-r","perfo.test"),stdout=subprocess.PIPE)
-# p.wait()
-# assert p.returncode == 0
-# after = time.time()
-# print 'Performance: 1 million instructions in:', after-before, 'seconds'
+# 3.5 seconds roughtly
+if len(sys.argv) > 1 and sys.argv[1] == "-p":
+  before = time.time()
+  p = subprocess.Popen(("../emulator","-r","perfo.test"),stdout=subprocess.PIPE)
+  p.wait()
+  assert p.returncode == 0
+  after = time.time()
+  print 'Performance: 1 million instructions in:', after-before, 'seconds'
