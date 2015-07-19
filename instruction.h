@@ -70,8 +70,44 @@ class Instruction {
   virtual unsigned char size() { return 2; }
   virtual void execute(State* s);
   virtual ~Instruction() {}
-  std::string sourceString;
   unsigned short bytes[3];
+};
+
+class VirtualInstruction : public Instruction {
+};
+
+class MemcpyModify : public VirtualInstruction {
+public:
+  unsigned short source, dest, amount;
+  unsigned short size_;
+
+  virtual std::string toString();
+  virtual unsigned char size() { return size_; }
+
+  virtual std::string instructionName() { return "memcpy_modify"; }
+
+  virtual void execute(State* s);
+
+  MemcpyModify(unsigned short rx_, unsigned short ry_, unsigned short rz_, unsigned short size__):
+    dest(rx_),source(ry_),amount(rz_),size_(size__) {
+  }
+};
+
+class MemclearModify : public VirtualInstruction {
+public:
+  unsigned short source, dest, amount;
+  unsigned short size_;
+
+  virtual std::string toString();
+  virtual unsigned char size() { return size_; }
+
+  virtual std::string instructionName() { return "memclear_modify"; }
+
+  virtual void execute(State* s);
+
+  MemclearModify(unsigned short rx_, unsigned short rz_, unsigned short size__):
+    dest(rx_),amount(rz_),size_(size__) {
+  }
 };
 
 class Condition : public Instruction {

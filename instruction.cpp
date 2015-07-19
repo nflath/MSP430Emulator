@@ -1,6 +1,7 @@
 #include "instruction.h"
 #include "state.h"
 #include "util.h"
+#include <stdlib.h>
 #include <assert.h>
 #include <string.h>
 #include <stdio.h>
@@ -75,7 +76,6 @@ setflags(unsigned int result, bool bw, State* s) {
   }
 
   s->data.r[2] = sr;
-
 }
 
 std::string
@@ -215,6 +215,52 @@ INTERRUPT::execute(State* s) {
   s->data.r[0] = retn;
   return;
 }
+
+std::string
+MemcpyModify::toString() {
+  std::stringstream ss_x;
+  ss_x << source;
+  std::stringstream ss_y;
+  ss_y << dest;
+  std::stringstream ss_z;
+  ss_z << amount;
+  return "memcpy_modify(r" + ss_y.str() + ", r" + ss_x.str() + ", r" + ss_z.str() + ")";
+}
+
+void
+MemcpyModify::execute(State* s) {
+  if( ((s->data.r[source] > s->data.r[dest]) && (s->data.r[dest]+s->data.r[amount]) > s->data.r[source])
+      || ((s->data.r[source] < s->data.r[dest]) && (s->data.r[source]+s->data.r[amount]) > s->data.r[dest])) {
+      notimplemented();
+  } else {
+    memcpy(s->data.memory+s->data.r[dest],
+           s->data.memory+s->data.r[source],
+           s->data.r[amount]);
+    s->data.r[source] = s->data.r[source] + amount;
+    s->data.r[dest] = s->data.r[dest] + amount;
+    s->data.r[amount] = 0;
+  }
+}
+
+std::string
+MemclearModify::toString() {
+  std::stringstream ss_y;
+  ss_y << dest;
+  std::stringstream ss_z;
+  ss_z << amount;
+  return "memclear_modify(r" + ss_y.str() + ", r" + ss_z.str() + ")";
+}
+
+void
+MemclearModify::execute(State* s) {
+  memset(s->data.memory+s->data.r[dest],
+         0,
+         s->data.r[amount]);
+    s->data.r[dest] = s->data.r[dest] + amount;
+    s->data.r[amount] = 0;
+}
+
+
 
 void
 JEQ::execute(State* s) {

@@ -54,8 +54,111 @@ State::reset(bool rereadFile) {
 
 Instruction*
 State::instructionForAddr(unsigned short addr) {
+  Instruction* retn = realInstructionForAddr(addr);
+  if(retn) {
+    // Possible memcpy
+    // addr: MOV @r_x+, 0x0000(r_y)
+    // ADD #0002, r_y
+    // SUB #0002, r_z
+    // CMP #0000, rz
+    // JNE addr
+    {
+      MOV* mov = dynamic_cast<MOV*>(retn);
+      if(mov) {
+        ADD* add = dynamic_cast<ADD*>(realInstructionForAddr(addr+mov->size()));
+        if(add) {
+          SUB* sub = dynamic_cast<SUB*>(realInstructionForAddr(addr+add->size()+mov->size()));
+          if(sub) {
+            CMP* cmp = dynamic_cast<CMP*>(realInstructionForAddr(addr+add->size()+sub->size()+mov->size()));
+            if(cmp) {
+              JNE* jne = dynamic_cast<JNE*>(realInstructionForAddr(addr+add->size()+sub->size()+cmp->size()+mov->size()));
+              if(jne) {
+                RegisterSource* movSource = dynamic_cast<RegisterIndirectAutoincrementSource*>(mov->source);
+                Constant* addSource = dynamic_cast<Constant*>(add->source);
+                Constant* subSource = dynamic_cast<Constant*>(sub->source);
+                Constant* cmpSource = dynamic_cast<Constant*>(cmp->source);
+
+                RegisterOffsetDest* movDest = dynamic_cast<RegisterOffsetDest*>(mov->dest);
+                RegisterDest* addDest = dynamic_cast<RegisterDest*>(mov->dest);
+                RegisterDest* subDest = dynamic_cast<RegisterDest*>(sub->dest);
+                RegisterDest* cmpDest = dynamic_cast<RegisterDest*>(cmp->dest);
+
+                if(movSource&&addSource&&subSource&&cmpSource&&movDest&&addDest&&subDest&&cmpDest) {
+                  unsigned short source = movSource->reg;
+                  unsigned short dest = movDest->reg;
+                  unsigned short amount = subDest->reg;
+                  if(dest == addDest->reg &&
+                     amount == cmpDest->reg&&
+                     addSource->val == 2&&
+                     subSource->val == 2&&
+                     cmpSource->val == 0&&
+                     addr == (jne->addr+2*jne->offset+2)) {
+                    return new MemcpyModify(dest,source,amount,mov->size()+add->size()+sub->size()+cmp->size()+jne->size());
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Possibl memclear
+    // 50e8: 8e43 0000: MOV  #0x0000, 0x0000(r14)
+    // 50ec: 2e53: ADD   #0x0002, r14
+    // 50ee: 2c83: SUB   #0x0002, r12
+    // 50f0: 0c93: CMP #0x0000, r12
+    // 50f2: fa23: JNE	0x50e8
+    {
+      MOV* mov = dynamic_cast<MOV*>(retn);
+      if(mov) {
+        ADD* add = dynamic_cast<ADD*>(realInstructionForAddr(addr+mov->size()));
+        if(add) {
+          SUB* sub = dynamic_cast<SUB*>(realInstructionForAddr(addr+add->size()+mov->size()));
+          if(sub) {
+            CMP* cmp = dynamic_cast<CMP*>(realInstructionForAddr(addr+add->size()+sub->size()+mov->size()));
+            if(cmp) {
+              JNE* jne = dynamic_cast<JNE*>(realInstructionForAddr(addr+add->size()+sub->size()+cmp->size()+mov->size()));
+              if(jne) {
+                Constant* movSource = dynamic_cast<Constant*>(mov->source);
+                Constant* addSource = dynamic_cast<Constant*>(add->source);
+                Constant* subSource = dynamic_cast<Constant*>(sub->source);
+                Constant* cmpSource = dynamic_cast<Constant*>(cmp->source);
+
+                RegisterOffsetDest* movDest = dynamic_cast<RegisterOffsetDest*>(mov->dest);
+                RegisterDest* addDest = dynamic_cast<RegisterDest*>(mov->dest);
+                RegisterDest* subDest = dynamic_cast<RegisterDest*>(sub->dest);
+                RegisterDest* cmpDest = dynamic_cast<RegisterDest*>(cmp->dest);
+
+                if(movSource&&addSource&&subSource&&cmpSource&&movDest&&addDest&&subDest&&cmpDest) {
+                  unsigned short dest = movDest->reg;
+                  unsigned short amount = subDest->reg;
+                  if(dest == addDest->reg &&
+                     amount == cmpDest->reg&&
+                     movSource->val == 0 &&
+                     addSource->val == 2&&
+                     subSource->val == 2&&
+                     cmpSource->val == 0&&
+                     addr == (jne->addr+2*jne->offset+2)) {
+                    return new MemclearModify(dest,amount,mov->size()+add->size()+sub->size()+cmp->size()+jne->size());
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+
+  }
+  return retn;
+}
+
+Instruction*
+State::realInstructionForAddr(unsigned short addr) {
   unsigned short val = readWord(addr);
-  Instruction * retn_;
+  Instruction * retn_ = 0;
   if(addr == 0x10) {
     retn_ = new INTERRUPT();
   } else if((val&0xff00) == 0) {
@@ -65,7 +168,9 @@ State::instructionForAddr(unsigned short addr) {
     unsigned short reg = (val&0x000f);
     retn->byte = bw;
     retn->source = sourceOperand(as, reg, addr+2);
-    retn_ = retn;
+    if(retn->source) {
+      retn_ = retn;
+    }
   } else if( (val&0xfb00) >> 10 == 0b000100) {
     OpCode_OneOperand opcode = (OpCode_OneOperand)((val&0x0380) >> 7);
     unsigned short bw = (val&0x0040) >> 6;
@@ -87,7 +192,9 @@ State::instructionForAddr(unsigned short addr) {
       retn->byte = bw;
       retn->source = sourceOperand(as, reg, addr+2);
     }
-    retn_ = retn;
+    if(retn->source) {
+      retn_ = retn;
+    }
   } else if( (val&0xe000) >> 13 == 0b001 ) {
 
     ConditionCode condition = (ConditionCode)((val&0x1c00)>>10);
@@ -138,17 +245,22 @@ State::instructionForAddr(unsigned short addr) {
     }
     retn->byte = bw;
     retn->source = sourceOperand(as, source, addr+2);
-    if(retn->source->usedExtensionWord) {
-      retn->dest = destOperand(ad, dest, addr + 4);
-    } else {
-      retn->dest = destOperand(ad, dest, addr + 2);
+    if(retn->source) {
+
+      if(retn->source->usedExtensionWord) {
+        retn->dest = destOperand(ad, dest, addr + 4);
+      } else {
+        retn->dest = destOperand(ad, dest, addr + 2);
+      }
+
+      if(retn->dest) {
+        retn_ = retn;
+      }
     }
 
-    retn_ = retn;
+
   }
   if(!retn_) {
-    std::cout << "Failed to find instruction." << std::endl;
-    s->data.running = false;
     return 0;
   } else {
     int i = 0;
@@ -160,7 +272,6 @@ State::instructionForAddr(unsigned short addr) {
     }
     return retn_;
   }
-
 }
 
 
@@ -423,6 +534,11 @@ State::list() {
       continue;
     }
     Instruction* instruction = instructionForAddr((unsigned short)i);
+    if(!instruction) {
+      std::cout << "Failed to find instruction at: 0x" << std::hex << (unsigned short)i << std::endl;
+      data.running = false;
+      return;
+    }
 
     std::cout << std::hex << std::setw(4) << std::setfill('0') << i << ": ";
 

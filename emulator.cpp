@@ -33,7 +33,6 @@ std::ostream& operator<<(std::ostream& os, const OpCode_TwoOperand& obj) {
 }
 
 int
-
 strToR(const std::string str) {
   if(str == "pc") {
     return 0;
