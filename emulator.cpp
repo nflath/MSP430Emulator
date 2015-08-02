@@ -5,7 +5,6 @@
 #include <fstream>
 #include <map>
 #include <assert.h>
-#include "emulator.h"
 #include "source.h"
 #include "dest.h"
 #include "state.h"
@@ -13,24 +12,6 @@
 #include "util.h"
 
 extern State* s;
-
-std::ostream& operator<<(std::ostream& os, const OpCode_TwoOperand& obj) {
-  switch(obj) {
-  case MOV_: std::cout << "MOV"; break;
-  case ADD_: std::cout << "ADD"; break;
-  case ADDC_:std::cout << "ADDC"; break;
-  case SUBC_:std::cout << "SUBC"; break;
-  case SUB_:std::cout << "SUB"; break;
-  case CMP_:std::cout << "CMP"; break;
-  case DADD_:std::cout << "DADD"; break;
-  case BIT_:std::cout << "BIT"; break;
-  case BIC_:std::cout << "BIC"; break;
-  case BIS_:std::cout << "BIS"; break;
-  case XOR_:std::cout << "XOR"; break;
-  case AND_:std::cout << "AND"; break;
-  }
-  return os;
-}
 
 int
 strToR(const std::string str) {
@@ -54,6 +35,7 @@ bool traceOnAll = false;
 bool break_on_print = false;
 bool break_on_input = false;
 int steps = 0;
+
 void
 execShellCommand(State* s, std::string command, std::string args) {
   if(command == "reset-steps") {
@@ -245,6 +227,11 @@ execShellCommand(State* s, std::string command, std::string args) {
     s->exit_on_finished = true;
   } else if(command == "exit") {
     exit(0);
+  } else if(command == "read-break") {
+    std::stringstream ss(args);
+    unsigned short addr;
+    ss >> std::hex >> addr;
+    s->read_breakpoint[addr] = true;
   } else {
     std::cout << "Unknown command: '" << command << "'" << std::endl;
   }
@@ -279,6 +266,4 @@ main(int argc, char** argv) {
     s->readMemoryDump(argv[1]);
   }
   shell(s);
-  // FixMe: test doesn't work
-  // test();
 }

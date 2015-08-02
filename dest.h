@@ -43,7 +43,7 @@ class RegisterOffsetDest : public RegisterDest {
  RegisterOffsetDest(unsigned short reg_, short offset_) :
   RegisterDest(reg_),
     offset(offset_) {
-    }
+ }
 
   short offset;
 };

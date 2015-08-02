@@ -10,6 +10,7 @@
 
 #include <assert.h>
 #include <string>
+#include <vector>
 #include <iostream>
 #include <iomanip>
 #include <sstream>
@@ -117,7 +118,6 @@ public:
 
   virtual std::string toString();
   virtual unsigned char size() { return size_; }
-
   virtual std::string instructionName() { return "clear"; }
 
   virtual void execute(State* s);
@@ -126,6 +126,23 @@ public:
     r(r_),size_(size__) {
   }
 };
+
+class InstructionList : public VirtualInstruction {
+public:
+  std::vector<Instruction*> instructions;
+  std::string name;
+  std::string toString_;
+
+  virtual unsigned char size() { return 0; }
+  virtual std::string toString() { return toString_; }
+  virtual std::string instructionName() { return name; }
+  virtual void execute(State* s);
+
+  InstructionList(std::string name):
+    name(name) {}
+};
+
+
 
 class Condition : public Instruction {
  public:

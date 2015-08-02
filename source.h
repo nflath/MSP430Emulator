@@ -40,7 +40,7 @@ class Absolute : public Source {
   virtual short value(bool byte=false);
 
  Absolute(short address_):
-  address(address_) {
+   address(address_) {
     usedExtensionWord = true;
   }
 };

@@ -33,6 +33,8 @@ public:
   Data data;
   Data prev_data[100];
   unsigned int data_idx ;
+  unsigned short read[500];
+  unsigned short read_idx;
 
   bool watchpoint_triggered;
   bool exit_on_finished;
@@ -43,7 +45,9 @@ public:
 
   std::map<unsigned short, std::string> label;
   std::map<unsigned short, std::string> section;
+
   std::map<unsigned short, bool> breakpoint;
+  std::map<unsigned short, bool> read_breakpoint;
   std::map<unsigned short, unsigned char> watchpoint;
   std::map<unsigned char, unsigned short> watchpointRegister;
 

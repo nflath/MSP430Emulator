@@ -24,8 +24,6 @@ Absolute::value(bool byte) {
   return s->readWord(address,byte);
 }
 
-
-
 short
 RegisterSource::value(bool byte) {
   return s->data.r[reg];

@@ -254,6 +254,14 @@ Clear::execute(State* s) {
   s->data.r[r] = 0;
 }
 
+void
+InstructionList::execute(State* s) {
+  for(int i = 0; i < instructions.size(); i++) {
+    s->data.r[0] += instructions[i]->size();
+    instructions[i]->execute(s);
+  }
+}
+
 std::string
 MemclearModify::toString() {
   std::stringstream ss_y;

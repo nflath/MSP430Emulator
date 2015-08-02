@@ -12,21 +12,22 @@ State::readWord(unsigned short addr, bool byte_) {
     }
     data.running = false;
   }
+  read[read_idx++] = addr;
+  read[read_idx++] = addr + 1;
+
   unsigned short nibble[] = {
-    (data.memory[addr+1]&0xf0),// >> 4,
-    (data.memory[addr+1]&0x0f),// << 4,
-    (data.memory[addr]&0xf0),// >> 4,
-    (data.memory[addr]&0x0f)// << 4
+    (data.memory[addr+1]&0xf0),
+    (data.memory[addr+1]&0x0f),
+    (data.memory[addr]&0xf0),
+    (data.memory[addr]&0x0f)
   };
   return(nibble[0] << 8) + (nibble[1] << 8) +
     (nibble[2]) + (nibble[3]);
-
-  //return(nibble[0]) + (nibble[1]) +
-  //(nibble[2] << 8) + (nibble[3] << 8);
 }
 
 unsigned char
 State::readByte(unsigned short addr) {
+  read[read_idx++] = addr;
   return data.memory[addr];
 }
 
@@ -39,8 +40,6 @@ State::reset(bool rereadFile) {
   data_idx = 0;
   data.dep_on = false;
   watchpoint_triggered=false;
-
-
 
   if(rereadFile) {
     if(lastDataFile!="") {
@@ -168,6 +167,255 @@ State::instructionForAddr(unsigned short addr) {
       }
 
     }
+
+    // Possible unencrypt_and_copy?
+    do {
+      std::vector<Instruction*> instructions;
+      Instruction* i = 0;
+      unsigned short addr = addr;
+
+      i = dynamic_cast<MOV*>(realInstructionForAddr(addr));
+      if(!i) { break; }
+      instructions.push_back(i);
+      addr += i->size();
+
+      i = dynamic_cast<PUSH*>(realInstructionForAddr(addr));
+      if(!i) { break; }
+      instructions.push_back(i);
+      addr += i->size();
+
+      JMP* jmp = dynamic_cast<JMP*>(realInstructionForAddr(addr));
+      if(!jmp) { break; }
+      instructions.push_back(jmp);
+      addr = jmp->addr+2*jmp->offset+2;
+
+      jmp = dynamic_cast<JMP*>(realInstructionForAddr(addr));
+      if(!jmp) { break; }
+      instructions.push_back(jmp);
+      addr = jmp->addr+2*jmp->offset+2;
+
+      i = dynamic_cast<MOV*>(realInstructionForAddr(addr));
+      if(!i) { break; }
+      instructions.push_back(i);
+      addr += i->size();
+
+      i = dynamic_cast<SWPB*>(realInstructionForAddr(addr));
+      if(!i) { break; }
+      instructions.push_back(i);
+      addr += i->size();
+
+      jmp = dynamic_cast<JMP*>(realInstructionForAddr(addr));
+      if(!jmp) { break; }
+      instructions.push_back(jmp);
+      addr = jmp->addr+2*jmp->offset+2;
+
+      SUB* sub = dynamic_cast<SUB*>(realInstructionForAddr(addr));
+      if(!sub) { break; }
+      instructions.push_back(sub);
+      addr += sub->size();
+
+      RegisterDest* subDest = dynamic_cast<RegisterDest*>(sub->dest);
+      Constant* subSource = dynamic_cast<Constant*>(sub->source);
+      if(!subDest || ! subSource || subDest->reg != 14 || subSource->val != 0x04d2) { break; }
+
+      jmp = dynamic_cast<JMP*>(realInstructionForAddr(addr));
+      if(!jmp) { break; }
+      instructions.push_back(jmp);
+      addr = jmp->addr+2*jmp->offset+2;
+
+      // FixMe: Stop checking registers/values
+
+      i = dynamic_cast<ADD*>(realInstructionForAddr(addr));
+      if(!i) { break; }
+      instructions.push_back(i);
+      addr += i->size();
+
+      i = dynamic_cast<RRC*>(realInstructionForAddr(addr));
+      if(!i) { break; }
+      instructions.push_back(i);
+      addr += i->size();
+
+      jmp = dynamic_cast<JMP*>(realInstructionForAddr(addr));
+      if(!jmp) { break; }
+      instructions.push_back(jmp);
+      addr = jmp->addr+2*jmp->offset+2;
+
+      i = dynamic_cast<DADD*>(realInstructionForAddr(addr));
+      if(!i) { break; }
+      instructions.push_back(i);
+      addr += i->size();
+
+      jmp = dynamic_cast<JMP*>(realInstructionForAddr(addr));
+      if(!jmp) { break; }
+      instructions.push_back(jmp);
+      addr = jmp->addr+2*jmp->offset+2;
+
+      i = dynamic_cast<RRA*>(realInstructionForAddr(addr));
+      if(!i) { break; }
+      instructions.push_back(i);
+      addr += i->size();
+
+      jmp = dynamic_cast<JMP*>(realInstructionForAddr(addr));
+      if(!i) { break; }
+      instructions.push_back(jmp);
+      addr = jmp->addr+2*jmp->offset+2;
+
+      i = dynamic_cast<RRC*>(realInstructionForAddr(addr));
+      if(!i) { break; }
+      instructions.push_back(i);
+      addr += i->size();
+
+      i = dynamic_cast<DADD*>(realInstructionForAddr(addr));
+      if(!i) { break; }
+      instructions.push_back(i);
+      addr += i->size();
+
+      jmp = dynamic_cast<JMP*>(realInstructionForAddr(addr));
+      if(!i) { break; }
+      instructions.push_back(jmp);
+      addr = jmp->addr+2*jmp->offset+2;
+
+      i = dynamic_cast<ADD*>(realInstructionForAddr(addr));
+      if(!i) { break; }
+      instructions.push_back(i);
+      addr += i->size();
+
+      i = dynamic_cast<RRC*>(realInstructionForAddr(addr));
+      if(!i) { break; }
+      instructions.push_back(i);
+      addr += i->size();
+
+      jmp = dynamic_cast<JMP*>(realInstructionForAddr(addr));
+      if(!i) { break; }
+      instructions.push_back(jmp);
+      addr = jmp->addr+2*jmp->offset+2;
+
+      i = dynamic_cast<ADD*>(realInstructionForAddr(addr));
+      if(!i) { break; }
+      instructions.push_back(i);
+      addr += i->size();
+
+      i = dynamic_cast<RRC*>(realInstructionForAddr(addr));
+      if(!i) { break; }
+      instructions.push_back(i);
+      addr += i->size();
+
+      jmp = dynamic_cast<JMP*>(realInstructionForAddr(addr));
+      if(!i) { break; }
+      instructions.push_back(jmp);
+      addr = jmp->addr+2*jmp->offset+2;
+
+      i = dynamic_cast<RRC*>(realInstructionForAddr(addr));
+      if(!i) { break; }
+      instructions.push_back(i);
+      addr += i->size();
+
+      jmp = dynamic_cast<JMP*>(realInstructionForAddr(addr));
+      if(!i) { break; }
+      instructions.push_back(jmp);
+      addr = jmp->addr+2*jmp->offset+2;
+
+      i = dynamic_cast<XOR*>(realInstructionForAddr(addr));
+      if(!i) { break; }
+      instructions.push_back(i);
+      addr += i->size();
+
+      jmp = dynamic_cast<JMP*>(realInstructionForAddr(addr));
+      if(!i) { break; }
+      instructions.push_back(jmp);
+      addr = jmp->addr+2*jmp->offset+2;
+
+      i = dynamic_cast<MOV*>(realInstructionForAddr(addr));
+      if(!i) { break; }
+      instructions.push_back(i);
+      addr += i->size();
+
+      i = dynamic_cast<ADD*>(realInstructionForAddr(addr));
+      if(!i) { break; }
+      instructions.push_back(i);
+      addr += i->size();
+
+      jmp = dynamic_cast<JMP*>(realInstructionForAddr(addr));
+      if(!i) { break; }
+      instructions.push_back(jmp);
+      addr = jmp->addr+2*jmp->offset+2;
+
+      i = dynamic_cast<MOV*>(realInstructionForAddr(addr));
+      if(!i) { break; }
+      instructions.push_back(i);
+
+      addr = s->data.r[0] + 0x51ec-0x51e8 + 2;
+
+      MOV* mov = dynamic_cast<MOV*>(realInstructionForAddr(addr));
+      if(!mov) { break; }
+      instructions.push_back(mov);
+      addr += mov->size();
+      RegisterOffsetDest* dest = dynamic_cast<RegisterOffsetDest*>(mov->dest);
+
+      InstructionList* il = new InstructionList("DecryptAndCopy");
+      il->instructions = instructions;
+      std::stringstream ss;
+
+      ss << "DecryptAndCopy r10, " << mov->dest->toString() << " (0x" << std::hex << data.r[10];
+      ss << ", 0x";
+      ss << data.r[12]+dest->offset;
+      ss << ")";
+      il->toString_ = ss.str();
+      return il;
+
+    } while(false);
+
+    do {
+      std::vector<Instruction*> instructions;
+      Instruction* i = 0;
+
+      std::stringstream ss;
+      unsigned short lastOffset = 0;
+      unsigned short lastAddr = 0;
+      unsigned short addr_ = addr;
+
+      short r = -1;
+      while(addr_ != lastAddr) {
+
+        lastAddr = addr_;
+
+        MOV* mov = dynamic_cast<MOV*>(realInstructionForAddr(addr_));
+        if(!mov) { break; }
+
+        Constant* source = dynamic_cast<Constant*>(mov->source);
+        RegisterOffsetDest* dest = dynamic_cast<RegisterOffsetDest*>(mov->dest);
+
+        if(!source||!dest) { break; }
+        if(!(r == -1 || dest->reg == r)) { break; }
+        if(source->value()) { break; }
+        if(lastOffset && lastOffset != (dest->offset-2)) { break; }
+
+        r = dest->reg;
+        instructions.push_back(mov);
+        if(ss.str()=="") {
+          ss << "memclear(0x" << std::hex << dest->offset << "(r" << std::dec << dest->reg << "), ";
+        }
+
+        addr_ = addr_ + mov->size();
+
+        lastOffset = dest->offset;
+      }
+      if(instructions.size()==6) {
+        if(MOV* mov = dynamic_cast<MOV*>(realInstructionForAddr(addr_))) {
+
+        }
+      }
+
+
+      if(instructions.size()>1) {
+        InstructionList* il = new InstructionList("memclear");
+        il->instructions = instructions;
+        ss << std::dec << instructions.size()*2 << ")";
+        il->toString_ = ss.str();
+        return il;
+      }
+
+    } while(false);
 
   }
   return retn;
@@ -596,6 +844,7 @@ State::step() {
   watchpoint_triggered = false;
   data.printed = false;
   data.inputed = false;
+  read_idx = 0;
   if((data.r[0] % 2)) {
     data.running = false;
     std::cout << "ISN unaligned:" << std::hex << data.r[0] << std::endl;
@@ -620,7 +869,6 @@ State::step() {
     data.r[0] += i->size();
   }
 
-
   i->execute(this);
 
 
@@ -643,6 +891,13 @@ State::step() {
   }
 
   delete i;
+
+  for(int i = 0; i < read_idx; i++) {
+    if(read_breakpoint.count(read[i])) {
+      std::cout << "Read watchpoint triggered: 0x" << std::hex << read[i] << std::endl;
+      watchpoint_triggered = true;
+    }
+  }
 
   for(std::map<unsigned short, unsigned char>::iterator j =  watchpoint.begin(); j != watchpoint.end(); j++) {
     if(j->second != data.memory[j->first]) {
