@@ -400,12 +400,6 @@ State::instructionForAddr(unsigned short addr) {
 
         lastOffset = dest->offset;
       }
-      if(instructions.size()==6) {
-        if(MOV* mov = dynamic_cast<MOV*>(realInstructionForAddr(addr_))) {
-
-        }
-      }
-
 
       if(instructions.size()>1) {
         InstructionList* il = new InstructionList("memclear");
@@ -415,6 +409,45 @@ State::instructionForAddr(unsigned short addr) {
         return il;
       }
 
+    } while(false);
+
+    do {
+      unsigned short addr_=addr;
+      std::vector<Instruction*> instructions;
+
+      MOV* mov = dynamic_cast<MOV*>(realInstructionForAddr(addr_));
+      if(!mov) { break; }
+      Constant* source = dynamic_cast<Constant*>(mov->source);
+      RegisterDest* dest = dynamic_cast<RegisterDest*>(mov->dest);
+      if(!source||source->val!=0xa000) { break; }
+      if(!dest||dest->reg!=2) {break; }
+      instructions.push_back(mov);
+      addr_ += mov->size();
+
+      CALL* call = dynamic_cast<CALL*>(realInstructionForAddr(addr_));
+      if(!call) { break; }
+      source = dynamic_cast<Constant*>(call->source);
+      if(!source||source->value()!=0x10) { break; }
+      instructions.push_back(call);
+      instructions.push_back(new INTERRUPT());
+      addr_ += call->size();
+
+
+
+      ADD* add = dynamic_cast<ADD*>(realInstructionForAddr(addr_));
+      if(!add) { break; }
+      source = dynamic_cast<Constant*>(add->source);
+      dest = dynamic_cast<RegisterDest*>(add->dest);
+      if(!source||source->value()) { break; }
+      instructions.push_back(add);
+
+      InstructionList* il = new InstructionList("r15=rand()");
+      il->instructions = instructions;
+      std::stringstream ss;
+      ss << "r" << std::dec << dest->reg << " = rand()";
+      il->toString_ = ss.str();
+
+      return il;
     } while(false);
 
   }
