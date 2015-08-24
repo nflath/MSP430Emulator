@@ -41,7 +41,7 @@ class RegisterOffsetDest : public RegisterDest {
   virtual unsigned char valueByte();
 
  RegisterOffsetDest(unsigned short reg_, short offset_) :
-  RegisterDest(reg_),
+   RegisterDest(reg_),
     offset(offset_) {
  }
 

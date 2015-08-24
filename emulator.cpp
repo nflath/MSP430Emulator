@@ -52,7 +52,7 @@ execShellCommand(State* s, std::string command, std::string args) {
       ss >> std::hex >> print_if;
     }
   } else if(command == "--trace") {
-    traceOnAll = !traceOnAll;
+    traceOnAll = !otraceOnAll;
   }else if(command == "--break-on-print") {
     break_on_print = !break_on_print;
   } else if(command == "--break-on-input") {
@@ -61,8 +61,6 @@ execShellCommand(State* s, std::string command, std::string args) {
     s->readMemoryDump(args);
   } else if(command == "dump") {
     s->createMemoryDump();
-  } else if(command == "list") {
-    s->list();
   } else if(command == "rand") {
     std::stringstream ss(args);
     ss >> std::hex >> s->data.rand;
