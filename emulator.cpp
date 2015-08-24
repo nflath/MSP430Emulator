@@ -34,6 +34,7 @@ bool printOnAll = false;
 bool traceOnAll = false;
 bool break_on_print = false;
 bool break_on_input = false;
+unsigned short print_if = 0;
 int steps = 0;
 
 void
@@ -46,6 +47,10 @@ execShellCommand(State* s, std::string command, std::string args) {
     std::cout << args << std::endl;
   } else if(command == "--print") {
     printOnAll = !printOnAll;
+    if(args.length()>0) {
+      std::stringstream ss(args);
+      ss >> std::hex >> print_if;
+    }
   } else if(command == "--trace") {
     traceOnAll = !traceOnAll;
   }else if(command == "--break-on-print") {
@@ -103,7 +108,7 @@ execShellCommand(State* s, std::string command, std::string args) {
             (!break_on_input||!s->data.inputed)) {
         steps++;
         s->step();
-        if(printOnAll) {
+        if((printOnAll&&!print_if)||(s->data.r[0]==print_if)) {
           std::cout << std::hex << s->data.r[0] << ": "<< std::flush;
           Instruction* j = s->instructionForAddr(s->data.r[0]);
           std::cout << j->toString() << std::endl;
@@ -152,7 +157,7 @@ execShellCommand(State* s, std::string command, std::string args) {
       for(int i = 0; i < max; i++) {
         s->step();
         steps++;
-        if(printOnAll) {
+        if((printOnAll&&!print_if)||(s->data.r[0]==print_if)) {
           std::cout << std::hex << s->data.r[0] << ": "<< std::flush;
           Instruction* j = s->instructionForAddr(s->data.r[0]);
           std::cout << j->toString() << std::endl;

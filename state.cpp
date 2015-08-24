@@ -432,8 +432,6 @@ State::instructionForAddr(unsigned short addr) {
       instructions.push_back(new INTERRUPT());
       addr_ += call->size();
 
-
-
       ADD* add = dynamic_cast<ADD*>(realInstructionForAddr(addr_));
       if(!add) { break; }
       source = dynamic_cast<Constant*>(add->source);
@@ -782,21 +780,22 @@ State::readMemoryDump(std::string filename) {
 void
 State::createMemoryDump() {
   bool starPrinted = false;
-  for(unsigned int i = 0; i < 0xfff; i++) {
+  for(unsigned int i = 0; i <= 0xfff; i++) {
 
     std::stringstream ss;
     for(unsigned int j = 0; j < 0x8; j++) {
-      ss << std::hex << std::setw(2) << std::setfill('0') << (unsigned short)data.memory[(i<<4) + j]
+
+      ss << std::hex << std::setw(2) << std::setfill('0') << (unsigned short)data.memory[(i<<4) + j*2]
          << std::hex << std::setw(2) << std::setfill('0') << (unsigned short)data.memory[(i<<4)+(j*2+1)] << " ";
     }
     if(ss.str() == "0000 0000 0000 0000 0000 0000 0000 0000 ") {
       if(starPrinted) {
       } else {
-        std::cout << std::hex << i << "0:   *" << std::endl;
+        std::cout << std::hex << std::setw(3) << std::setfill('0') << i << "0:   *" << std::endl;
         starPrinted = true;
       }
     } else {
-      std::cout << std::hex << i << "0:   ";
+      std::cout << std::hex << std::setw(3) << std::setfill('0') << i << "0:   ";
       std::cout << ss.str();
       std::cout << std::endl;
       starPrinted = false;
@@ -804,7 +803,12 @@ State::createMemoryDump() {
 
   }
   for(unsigned int r = 0; r < 16; r++) {
-    std::cout << "r" << std::setbase(10) << r << " " << std::hex << std::setw(4) << std::setfill('0') << data.r[r] << std::endl;
+    std::cout << "r" << std::setbase(10) << std::setw(2) << std::setfill('0') << r << " " << std::hex << std::setw(4) << std::setfill('0') << data.r[r];
+    if(r%4==3) {
+      std::cout << std::endl;
+    } else {
+      std::cout << "  ";
+    }
   }
 }
 
@@ -897,7 +901,6 @@ State::step() {
     return;
   }
 
-
   if(data.r[0]==pc) {
     data.r[0] += i->size();
   }
@@ -910,12 +913,14 @@ State::step() {
       exit(0);
     }
   }
+
   if(data.r[2]&0x0080) {
     data.running = false;
     if(exit_on_finished) {
       exit(1);
     }
   }
+
   if(data.r[2]&0x0010) {
     data.running = false;
     if(exit_on_finished) {
