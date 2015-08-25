@@ -11,24 +11,9 @@
 #include "instruction.h"
 #include "util.h"
 
+// Main file driving the execution of the emulator/debugger
+
 extern State* s;
-
-int
-strToR(const std::string str) {
-  if(str == "pc") {
-    return 0;
-  } else if(str == "sr") {
-    return 2;
-  } else if(str == "sp") {
-    return 1;
-  }
-  if(str[0] == 'r') {
-    unsigned long value = strtoul(str.substr(1).c_str(),NULL,10);
-    return value;
-  }
-
-  return -1;
-}
 
 bool printOnAll = false;
 bool traceOnAll = false;
@@ -39,6 +24,7 @@ int steps = 0;
 
 void
 execShellCommand(State* s, std::string command, std::string args) {
+  // Execute one instruction in the debug shell
   if(command == "reset-steps") {
     steps = 0;
   } else if(command == "steps") {
@@ -52,7 +38,7 @@ execShellCommand(State* s, std::string command, std::string args) {
       ss >> std::hex >> print_if;
     }
   } else if(command == "--trace") {
-    traceOnAll = !otraceOnAll;
+    traceOnAll = !traceOnAll;
   }else if(command == "--break-on-print") {
     break_on_print = !break_on_print;
   } else if(command == "--break-on-input") {
@@ -242,6 +228,7 @@ execShellCommand(State* s, std::string command, std::string args) {
 
 void
 shell(State* s) {
+  // Main control loop of the emulator.  Read an input, run one instruction, repeat.
   std::cout << ">> " << std::flush;
   std::string input;
 
@@ -261,7 +248,8 @@ shell(State* s) {
 
 int
 main(int argc, char** argv) {
-
+  // Main entry point.  Can either run a script, start with a loaded binary file, or
+  // just start an empty debug shell.
   if(argc == 1) {
   } else if (!strcmp(argv[1],"-r")) {
     execShellCommand(s, "run",argv[2]);

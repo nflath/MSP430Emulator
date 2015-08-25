@@ -1,10 +1,3 @@
-
-// http://www.ece.utep.edu/courses/web3376/Links_files/MSP430%20Quick%20Reference.pdf
-// http://www.physics.mcmaster.ca/phys3b06/MSP430/MSP430_Instruction_Set_Summary.pdf
-// http://homepages.ius.edu/RWISMAN/C335/HTML/MSP430/Chapt4.pdf
-// *** http://www.physics.mcmaster.ca/phys3b06/MSP430/Instruction_Set.pdf
-// http://www.ti.com.cn/cn/lit/ug/slau049f/slau049f.pdf
-
 #ifndef INSTRUCTION_H
 #define INSTRUCTION_H
 
@@ -20,6 +13,18 @@
 
 class State;
 
+// Contains all classes used to represent instructions in the MSP430 instruction set,
+// plus a few 'virtual' instructions.
+
+// Various References:
+// http://www.ece.utep.edu/courses/web3376/Links_files/MSP430%20Quick%20Reference.pdf
+// http://www.physics.mcmaster.ca/phys3b06/MSP430/MSP430_Instruction_Set_Summary.pdf
+// http://homepages.ius.edu/RWISMAN/C335/HTML/MSP430/Chapt4.pdf
+// *** http://www.physics.mcmaster.ca/phys3b06/MSP430/Instruction_Set.pdf
+// http://www.ti.com.cn/cn/lit/ug/slau049f/slau049f.pdf
+
+
+// Various Enumerations used in order to translate from assembly to an instruction
 enum ConditionCode {
   JNE_,
   JEQ_,
@@ -57,9 +62,14 @@ enum OpCode_OneOperand {
 };
 
 class Instruction {
- public:
+  // Virtual base class representing a single instruction.
+public:
+
   virtual std::string toString() = 0;
+  // Returns a string representation of this instruction
+
   virtual std::string byteStr() {
+    // Returns the bytes corresponding to this instruction
     std::stringstream ss;
     for(int i = 0; i < size()/2; i++) {
       if(i != 0) ss << " ";
@@ -67,17 +77,40 @@ class Instruction {
     }
     return ss.str();
   }
+
   virtual std::string instructionName() = 0;
+  // Returns the name of the instruction ('RRC','ADD', etc)
+
   virtual unsigned char size() { return 2; }
+  // Return how many bytes this instruction took.
+
   virtual void execute(State* s);
+  // Executes this instruction on the given MSP430 state.
+
   virtual ~Instruction() {}
+
   unsigned short bytes[3];
+  // actual bytes representing this instruction
 };
 
 class VirtualInstruction : public Instruction {
+  // Virtual instructions are just collections of instructions that
+  // do not correspond to an actual instruction.  For example:
+  // xxxx   ADD r15, 0xffff
+  // xxxx+2 JNE xxxx
+  // Will simplify to
+  // CLEAR r15
+  // These are just used in order to simplify the presentation in order to make
+  // traces more understandable (so, you don't have 1000 lines of ADD,JNE, but just one CLEAR).
 };
 
 class MemcpyModify : public VirtualInstruction {
+  // Virtual instruction representing a 'memcpy' that modifies it's arguments.
+  // Equivalent to:
+  // memcpy(r[dest], r[source], r[amount])
+  // r[source] += amount
+  // r[dest] += amount
+  // r[amount] = 0
 public:
   unsigned short source, dest, amount;
   unsigned short size_;
@@ -95,8 +128,14 @@ public:
 };
 
 class MemclearModify : public VirtualInstruction {
+  // Virtual instruction representing a 'memcpy' that modifies it's arguments.
+  // Equivalent to:
+  // memclear(r[dest], r[amount])
+  // r[dest] += amount
+  // r[amount] = 0
+
 public:
-  unsigned short source, dest, amount;
+  unsigned short dest, amount;
   unsigned short size_;
 
   virtual std::string toString();
@@ -112,6 +151,10 @@ public:
 };
 
 class Clear : public VirtualInstruction {
+  // Virtual instruction representing a 'clear'.
+  // Equivalent to:
+  // r[r] = 0
+
 public:
   unsigned short r;
   unsigned short size_;
@@ -128,6 +171,8 @@ public:
 };
 
 class InstructionList : public VirtualInstruction {
+  // Generic VirtualInstruction; has a list of instructions to execute when it is executed
+  // but a different string representation.  Used for more complicated virtual instructions.
 public:
   std::vector<Instruction*> instructions;
   std::string name;
@@ -142,8 +187,7 @@ public:
     name(name) {}
 };
 
-
-
+// From here on down are actual instructions that the MSP430 can perform.
 class Condition : public Instruction {
  public:
   virtual std::string toString();

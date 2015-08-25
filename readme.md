@@ -87,3 +87,12 @@ let me know if there are any issues.
 --------------------------------------------------------------------------------
 
 Patches are welcome.
+
+--------------------------------------------------------------------------------
+Possible Future Enhancements
+--------------------------------------------------------------------------------
+- Switch from snapshotting main memory to a diff-based reversible debugging
+- Don't leak memory all over the place
+- More cleanly split the emulator and the debugger state
+- Refactor the control loop to be much cleaner
+- Use more standard input functions (eg, for registers)

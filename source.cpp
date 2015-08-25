@@ -40,7 +40,6 @@ RegisterIndirectAutoincrementSource::value(bool byte) {
   unsigned short retn = s->readWord(s->data.r[reg],byte);
   s->data.r[reg]+=byte?1:2;
 
-
   return retn;
 }
 

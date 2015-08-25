@@ -1,5 +1,6 @@
 #include "state.h"
 #include "instruction.h"
+#include "util.h"
 #include <assert.h>
 #include <fstream>
 
@@ -30,7 +31,6 @@ State::readByte(unsigned short addr) {
   read[read_idx++] = addr;
   return data.memory[addr];
 }
-
 
 void
 State::reset(bool rereadFile) {
@@ -165,11 +165,11 @@ State::instructionForAddr(unsigned short addr) {
           }
         }
       }
-
     }
 
-    // Possible unencrypt_and_copy?
+    // Possible decrypt_and_copy?
     do {
+      // This is a very esoteric virtual instruction used in the hollywood level
       std::vector<Instruction*> instructions;
       Instruction* i = 0;
       unsigned short addr = addr;
@@ -366,6 +366,7 @@ State::instructionForAddr(unsigned short addr) {
     } while(false);
 
     do {
+      // Possible memclear
       std::vector<Instruction*> instructions;
       Instruction* i = 0;
 
@@ -412,6 +413,7 @@ State::instructionForAddr(unsigned short addr) {
     } while(false);
 
     do {
+      // Possible r15=rand()
       unsigned short addr_=addr;
       std::vector<Instruction*> instructions;
 
@@ -454,6 +456,8 @@ State::instructionForAddr(unsigned short addr) {
 
 Instruction*
 State::realInstructionForAddr(unsigned short addr) {
+  // See Instruction.h for a list of references about the MSP430 instruction
+  // set
   unsigned short val = readWord(addr);
   Instruction * retn_ = 0;
   if(addr == 0x10) {
@@ -575,10 +579,9 @@ State::realInstructionForAddr(unsigned short addr) {
 Source*
 State::sourceOperand(unsigned short as, unsigned short source, unsigned short addr) {
   if(source == 0) {
-    // Using the PC
     switch(as) {
     case 0: {
-      return new RegisterSource(source,(unsigned char*)&s->data.r[source]); // FixMe is this correct?
+      return new RegisterSource(source,(unsigned char*)&s->data.r[source]);
     }
     case 1: {
       return new RegisterIndirectSource(0,&s->data.memory[s->data.r[source]]);
@@ -588,13 +591,11 @@ State::sourceOperand(unsigned short as, unsigned short source, unsigned short ad
     }
     case 3: {
       return new Constant(readWord(addr),true);
-      //new RegisterIndirectAutoincrementSource(0); // FixMe: Is this true?
     }
     }
   } else if(source == 2) {
     switch(as) {
     case 0: {
-      // FixMe: is this correct?
       return new RegisterSource(source,(unsigned char*)&s->data.r[source]);
     }
     case 1: {
@@ -647,7 +648,6 @@ State::destOperand(unsigned short ad, unsigned short dest, unsigned short addr) 
   if(dest == 0) {
     switch(ad) {
     case 0: {
-      // FixMe: Is this correct?
       return new RegisterDest(dest);
     }
     case 1: {
@@ -657,7 +657,6 @@ State::destOperand(unsigned short ad, unsigned short dest, unsigned short addr) 
   } else if(dest == 2) {
     switch(ad) {
     case 0: {
-      // FixMe: Is this correct?
       return new RegisterDest(dest);
     }
     case 1: {
@@ -675,24 +674,6 @@ State::destOperand(unsigned short ad, unsigned short dest, unsigned short addr) 
     }
   }
   return 0;
-}
-
-unsigned short
-State::strToReg(std::string str) {
-  if(str.substr(0,2) == "pc") {
-    return 0;
-  } if(str.substr(0,2) == "sp") {
-    return 1;
-  } if(str.substr(0,2) == "sr") {
-    return 2;
-  } if(str.substr(0,2) == "cg") {
-    return 3;
-  }
-  std::stringstream ss;
-  ss << str.substr(1,str.size());
-  unsigned short r;
-  ss >> r;
-  return r;
 }
 
 void
@@ -718,32 +699,31 @@ State::compare(std::string filename) {
 
 void
 State::readMemoryDump(std::string filename) {
-  lastFile = "";
   lastDataFile =filename;
   std::ifstream f(filename.c_str());
   if (f.is_open()) {
     std::string line;
-    bool resetRegisters = true;
     for(unsigned short i = 0; i < 0xffff; i++) {
       data.memory[i] = 0;
     }
+    data.r[0] = 0x4400;
+    for(int i = 1; i < 15; i++) {
+      data.r[i] = 0;
+    }
 
     while ( getline (f,line) ) {
-      // 4 cases: instruction, label, string, section
-
       try {
         if(line == "") {
           continue;
         }
         if(std::string(line.substr(0,2)) == "pc" || line[0] == 'r') {
           for(int i = 0; i < 4; i++) {
-            resetRegisters = false;
             std::string reg = line.substr(i * 10,3);
             std::stringstream ss;
             unsigned short value;
             ss << std::hex << line.substr(i*10+4,i*10+8);
             ss >> value;
-            data.r[strToReg(reg)] = value;
+            data.r[strToR(reg)] = value;
           }
         } else if(line.substr(0,2)!="--") {
           std::string addrString = line.substr(0,4);
@@ -764,13 +744,6 @@ State::readMemoryDump(std::string filename) {
       }
     }
 
-    if(resetRegisters) {
-      data.r[0] = 0x4400;
-      for(int i = 1; i < 15; i++) {
-        data.r[i] = 0;
-      }
-    }
-
   } else {
     std::cout << "Error opening file: '" << filename << "'" << std::endl;
   }
@@ -784,7 +757,6 @@ State::createMemoryDump() {
 
     std::stringstream ss;
     for(unsigned int j = 0; j < 0x8; j++) {
-
       ss << std::hex << std::setw(2) << std::setfill('0') << (unsigned short)data.memory[(i<<4) + j*2]
          << std::hex << std::setw(2) << std::setfill('0') << (unsigned short)data.memory[(i<<4)+(j*2+1)] << " ";
     }
@@ -809,51 +781,6 @@ State::createMemoryDump() {
     } else {
       std::cout << "  ";
     }
-  }
-}
-
-void
-State::list() {
-  int i = 0x10;
-  std::string currentSection = "";
-  while(i != 0xffff) {
-    if(label.find((unsigned short)i) != label.end()) {
-      std::cout << std::hex << std::setw(4) << std::setfill('0') << i << " <" << label[i] << ">" << std::endl;
-      currentSection = "";
-    }
-    if(section.find((unsigned short)i) != section.end()) {
-      std::cout << std::hex << std::setw(4) << std::setfill('0') << i << " ." << section[i] << ":" << std::endl;
-      currentSection = section[i];
-    }
-    if(data.memory[i] == 0 && data.memory[i+1] == 0x13) {
-      return;
-    }
-    if(data.memory[i] == 0) {
-      i++;
-      continue;
-    }
-    if(currentSection!="") {
-      i++;
-      continue;
-    }
-    Instruction* instruction = instructionForAddr((unsigned short)i);
-    if(!instruction) {
-      std::cout << "Failed to find instruction at: 0x" << std::hex << (unsigned short)i << std::endl;
-      data.running = false;
-      return;
-    }
-
-    std::cout << std::hex << std::setw(4) << std::setfill('0') << i << ": ";
-
-    for(int j = 0; j < instruction->size()/2; j++) {
-      std::cout << std::hex << std::setw(2) << std::setfill('0') << (unsigned short)data.memory[i+2*j] <<  std::hex << std::setw(2) << std::setfill('0') << (unsigned short)data.memory[i+2*j+1] << " ";
-    }
-    i += instruction->size();
-
-    std::cout << instruction->toString() << std::endl;
-
-
-    //delete instruction;
   }
 }
 
@@ -885,6 +812,7 @@ State::step() {
   if((data.r[0] % 2)) {
     data.running = false;
     std::cout << "ISN unaligned:" << std::hex << data.r[0] << std::endl;
+    return;
   }
 
   memcpy(&prev_data[data_idx],&data, sizeof(data));
@@ -906,7 +834,6 @@ State::step() {
   }
 
   i->execute(this);
-
 
   if(!data.locked) {
     if(exit_on_finished) {

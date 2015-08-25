@@ -6,48 +6,9 @@
 #include <string.h>
 #include <stdio.h>
 
-// FixMe: Why is an extra letter being printed out at the end of strings?
-
-// FixMe: Set status bits properly
-
-// V Overflow bit. This bit is set when the result of an arithmetic operation
-// overflows the signed-variable range.
-// ADD(.B),ADDC(.B) Set when:
-//   Positive + Positive = Negative
-//   Negative + Negative = Positive,
-//   otherwise reset
-//   SUB(.B),SUBC(.B),CMP(.B) Set when:
-//   Positive − Negative = Negative
-//   Negative − Positive = Positive,
-//   otherwise reset
-
-//   N Negative bit. This bit is set when the result of a byte or word operation
-//   is negative and cleared when the result is not negative.
-//   Word operation: N is set to the value of bit 15 of the
-//   result
-//   Byte operation: N is set to the value of bit 7 of the
-//   result
-
-//   Z Zero bit. This bit is set when the result of a byte or word operation is 0
-//   and cleared when the result is not 0.
-
-//   C Carry bit. This bit is set when the result of a byte or word operation
-//   produced a carry and cleared when no carry occurred
-
-// and.b #0x-1, r5
-// #status register goes from 0 to 2
-
-// clr r15
-// tst r15
-// sr goes from 2 to 3
-
-#define SR_C = 0x1;
-#define SR_Z = 0x2;
-#define SR_N = 0x4;
-#define SR_V = 0x8;
-
 void
 setandflags(State*s, unsigned short value, bool byte=false) {
+  // Utility function to set flags for one-operand operations
   s->data.r[2] =
     (byte?(!!(value&0x8000) << 2):(!!(value&0x80) << 2)) |
     !value << 1 |
@@ -57,6 +18,7 @@ setandflags(State*s, unsigned short value, bool byte=false) {
 
 void
 setflags(unsigned int result, bool bw, State* s) {
+  // Used to set status flags for SUB/ADD instruction.
   unsigned short sr = 0;
   unsigned sz = 16;
   if(bw) {
@@ -109,6 +71,7 @@ INTERRUPT::toString() {
 
 void
 INTERRUPT::execute(State* s) {
+  // Perform an interrupt based on what is in the status register.
   unsigned char interrupt = (s->data.r[2]&0x7f00) >> 8;
   switch(interrupt) {
   case 0x00: {// putchar
@@ -143,7 +106,7 @@ INTERRUPT::execute(State* s) {
     unsigned short maxbytes = s->readWord(s->data.r[1]+10);
     std::string str;
     if(s->input.size()) {
-      str =  s->input.front();
+      str = s->input.front();
       s->input.erase(s->input.begin());
     } else {
       str = readString();
@@ -205,9 +168,7 @@ INTERRUPT::execute(State* s) {
     break;
   }
   default:
-
-    std::cout << "Interrupt unknown: " << interrupt << "address: " << std::hex << s->data.r[0] << std::endl;
-    assert(!"Invalid interrupt");
+  std::cout << "Interrupt unknown: " << interrupt << "address: " << std::hex << s->data.r[0] << std::endl;
     notimplemented();
   }
   unsigned short retn = s->readWord(s->data.r[1]);
@@ -231,7 +192,8 @@ void
 MemcpyModify::execute(State* s) {
   if( ((s->data.r[source] > s->data.r[dest]) && (s->data.r[dest]+s->data.r[amount]) > s->data.r[source])
       || ((s->data.r[source] < s->data.r[dest]) && (s->data.r[source]+s->data.r[amount]) > s->data.r[dest])) {
-      notimplemented();
+    // Don't support overlapping memory segments
+    notimplemented();
   } else {
     memcpy(s->data.memory+s->data.r[dest],
            s->data.memory+s->data.r[source],
@@ -280,58 +242,44 @@ MemclearModify::execute(State* s) {
     s->data.r[amount] = 0;
 }
 
-
-
 void
 JEQ::execute(State* s) {
-  if(s->data.r[2] == 0x0f00) {
-    notimplemented();
-  } else if((s->data.r[2]&0x2)!=0) {
+  if((s->data.r[2]&0x2)!=0) {
     s->data.r[0] = addr+2*offset+2;
   }
 }
 
 void
 JL::execute(State* s) {
-  if(s->data.r[2] == 0x0f00) {
-    notimplemented();
-  } else if((s->data.r[2]&0x4)!=0) {
+  if((s->data.r[2]&0x4)!=0) {
     s->data.r[0] = addr+2*offset+2;
   }
 }
 
 void
 JC::execute(State* s) {
-  if(s->data.r[2] == 0x0f00) {
-    notimplemented();
-  } else if((s->data.r[2]&0x1)!=0) {
+  if((s->data.r[2]&0x1)!=0) {
     s->data.r[0] = addr+2*offset+2;
   }
 }
 
 void
 JN::execute(State* s) {
-  if(s->data.r[2] == 0x0f00) {
-    notimplemented();
-  } else if((s->data.r[2]&0x1)!=0) {
+  if((s->data.r[2]&0x1)!=0) {
     s->data.r[0] = addr+2*offset+2;
   }
 }
 
 void
 JNC::execute(State* s) {
-  if(s->data.r[2] == 0x0f00) {
-    notimplemented();
-  } else if((s->data.r[2]&0x1)==0) {
+  if((s->data.r[2]&0x1)==0) {
     s->data.r[0] = addr+2*offset+2;
   }
 }
 
 void
 JGE::execute(State* s) {
-  if(s->data.r[2] == 0x0f00) {
-    notimplemented();
-  } else if((s->data.r[2]&0x4)==0) {
+  if((s->data.r[2]&0x4)==0) {
     s->data.r[0] = addr+2*offset+2;
   }
 }
@@ -348,9 +296,7 @@ SWPB::execute(State* s) {
 
 void
 JNE::execute(State* s) {
-  if(s->data.r[2] == 0x0f00) {
-    notimplemented();
-  } else if((s->data.r[2]&0x2)==0) {
+  if((s->data.r[2]&0x2)==0) {
     s->data.r[0] = addr+2*offset+2;
   }
 }
@@ -470,7 +416,6 @@ convertHexToBcd(unsigned int value) {
   std::cout << "convertHexToBcd: " << value << std::endl;
   unsigned int result = 0;
   if(value >= 10000) {
-    // FixMe: Add carry bit calculations
     value /= 10;
   } else {
     int position = 0;
@@ -502,7 +447,6 @@ addBcd(unsigned int val1, unsigned int val2) {
       (((val1 & (0xf << position * 4))) >> (position * 4)) +
       (((val2 & (0xf << position * 4))) >> (position * 4));
     setn = !!(nibble&0x8);
-    // FixMe: I don't understand this.
     if( nibble > 9 ) {
       nibble = 0xf&(nibble - 10);
       carry = 1;
@@ -521,8 +465,6 @@ addBcd(unsigned int val1, unsigned int val2) {
 void
 DADD::execute(State* s) {
   if(!byte) {
-    // FixMe: Add carry bit calculations
-
     BcdResult bcd = addBcd(dest->value(),source->value());
 
     dest->set(bcd.result);
@@ -536,13 +478,9 @@ DADD::execute(State* s) {
   }
 }
 
-//7815 -+
-//fb2e
-
 void
 SUB::execute(State* s) {
   if(!byte) {
-
     unsigned int olddest = 0xffff&(unsigned int)dest->value();
     unsigned int oldsource = 0xffff&(unsigned int)source->value();
     unsigned int tmpsrc = 0xffff&(~(unsigned int)oldsource + 1);
@@ -555,7 +493,7 @@ SUB::execute(State* s) {
     setflags(result, byte, s);
 
   } else {
-    assert(!"Not implemented");
+    notimplemented();
   }
 }
 
@@ -565,7 +503,7 @@ BIC::execute(State* s) {
     unsigned short result = (dest->value())&~(source->value());
     dest->set(result);
   } else {
-    assert(!"Not implemented");
+    notimplemented();
   }
 }
 
@@ -617,7 +555,6 @@ RRC::execute(State* s) {
   int n = !!(source->value()&0x8000)<<2;
   s->data.r[2] = (s->data.r[2] & 0x04) | (!source) << 1 | carry;
   if(n) s->data.r[2] |= n;
-  // Doesn't clear N
 }
 
 void
